@@ -1,81 +1,66 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip as RechartsTooltip,
-  Legend,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
 import { useStore } from '@/lib/store';
 import { useT } from '@/lib/i18n';
 import { calculateBudget, getEffectiveRate } from '@/lib/budget';
 import { formatCurrency, formatNumber } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
 import costsData from '@/data/costs.json';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, Legend } from 'recharts';
 import { PieChart as PieIcon, BarChart2, Table } from 'lucide-react';
 
-const PALETTE = [
-  '#0284c7', // sky
-  '#6366f1', // indigo
-  '#10b981', // emerald
-  '#f59e0b', // amber
-  '#ec4899', // pink
-  '#14b8a6', // teal
-];
+interface BudgetChartsProps {
+  categories?: any[];
+}
 
-export function BudgetCharts() {
+export function BudgetCharts({ categories = costsData.categories }: BudgetChartsProps) {
   const t = useT();
-  const { items, exchangeRate, language, setActiveStep, activeStep } = useStore();
+  const { items, exchangeRate, activeStep, setActiveStep, language } = useStore();
   const [viewMode, setViewMode] = useState<'donut' | 'bar' | 'table'>('donut');
-
-  const categories = costsData.categories;
 
   const effectiveRate = getEffectiveRate(
     exchangeRate.manualOverride ? (exchangeRate.manualRate || exchangeRate.rate) : exchangeRate.rate,
     exchangeRate.bankMargin
   );
 
-  const budget = useMemo(() => {
-    return calculateBudget(items, effectiveRate, 0, categories as any[]);
-  }, [items, effectiveRate, categories]);
+  const budget = calculateBudget(items, effectiveRate, 0, categories);
 
-  // Donut chart data: category distribution for selected budget
+  // Palette matching design tokens
+  const categoryColors: Record<string, string> = {
+    preparation: '#0284c7', // Sky
+    university: '#6366f1',  // Indigo
+    'blocked-account': '#10b981', // Emerald
+    visa: '#f59e0b',        // Amber
+    'housing-ticket': '#ec4899', // Pink
+    arrival: '#14b8a6',     // Teal
+  };
+
   const donutData = useMemo(() => {
     return categories
-      .map((cat, idx) => {
+      .map((cat) => {
         const catBudget = budget.byCategory[cat.id];
-        const value = catBudget ? Math.round(catBudget.selectedBDT) : 0;
         return {
           id: cat.id,
-          step: idx,
+          step: cat.step,
           name: language === 'bn' ? cat.labelBn : cat.labelEn,
-          value,
-          color: PALETTE[idx % PALETTE.length],
+          value: catBudget ? catBudget.selectedBDT : 0,
+          color: categoryColors[cat.id] || '#64748b',
         };
       })
       .filter((d) => d.value > 0);
   }, [categories, budget, language]);
 
-  // Stacked Bar chart data
   const barData = useMemo(() => {
-    return categories.map((cat, idx) => {
+    return categories.map((cat) => {
       const catBudget = budget.byCategory[cat.id];
       return {
+        id: cat.id,
         name: language === 'bn' ? cat.labelBn : cat.labelEn,
-        step: idx,
-        min: catBudget ? Math.round(catBudget.minBDT) : 0,
-        selected: catBudget ? Math.round(catBudget.selectedBDT) : 0,
-        actual: catBudget ? Math.round(catBudget.actualBDT) : 0,
-        max: catBudget ? Math.round(catBudget.maxBDT) : 0,
+        min: catBudget?.minBDT || 0,
+        selected: catBudget?.selectedBDT || 0,
+        actual: catBudget?.actualBDT || 0,
+        max: catBudget?.maxBDT || 0,
       };
     });
   }, [categories, budget, language]);
@@ -88,6 +73,30 @@ export function BudgetCharts() {
         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }
+  };
+
+  // Modern tailored Tooltip for Donut Chart
+  const CustomDonutTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      const percent =
+        budget.totalSelectedBDT > 0
+          ? Math.round((data.value / budget.totalSelectedBDT) * 100)
+          : 0;
+      return (
+        <div className="bg-popover/95 backdrop-blur-md border border-border px-3 py-2 rounded-xl shadow-lg text-xs pointer-events-none z-50 animate-in fade-in-50">
+          <div className="flex items-center gap-1.5 font-semibold text-foreground mb-0.5">
+            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: data.color }} />
+            <span>{data.name}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3 font-mono">
+            <span className="text-primary font-bold">{formatCurrency(data.value, 'BDT', language)}</span>
+            <span className="text-muted-foreground text-[11px]">({formatNumber(percent, language)}%)</span>
+          </div>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -106,38 +115,39 @@ export function BudgetCharts() {
             </CardDescription>
           </div>
 
+          {/* Mode Switcher Buttons */}
           <div className="flex items-center bg-muted/60 p-0.5 rounded-xl border border-border/60 text-xs self-start sm:self-auto">
             <button
               onClick={() => setViewMode('donut')}
-              className={`px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
                 viewMode === 'donut'
                   ? 'bg-background text-foreground shadow-2xs font-semibold'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <PieIcon className="h-3 w-3" />
+              <PieIcon className="h-3.5 w-3.5 text-primary" />
               <span>{language === 'bn' ? 'পাই' : 'Donut'}</span>
             </button>
             <button
               onClick={() => setViewMode('bar')}
-              className={`px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
                 viewMode === 'bar'
                   ? 'bg-background text-foreground shadow-2xs font-semibold'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <BarChart2 className="h-3 w-3" />
+              <BarChart2 className="h-3.5 w-3.5 text-indigo-500" />
               <span>{language === 'bn' ? 'বার' : 'Bar'}</span>
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
                 viewMode === 'table'
                   ? 'bg-background text-foreground shadow-2xs font-semibold'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <Table className="h-3 w-3" />
+              <Table className="h-3.5 w-3.5 text-emerald-500" />
               <span>{language === 'bn' ? 'টেবিল' : 'Table'}</span>
             </button>
           </div>
@@ -145,7 +155,7 @@ export function BudgetCharts() {
       </CardHeader>
 
       <CardContent className="pt-2">
-        {/* Category breakdown highlight */}
+        {/* Category breakdown highlight summary */}
         <div className="grid grid-cols-2 gap-2 mb-4 p-2.5 rounded-xl bg-muted/30 border border-border/40 text-xs">
           <div>
             <span className="text-[10px] text-muted-foreground block">{t('heroHeadline')}</span>
@@ -163,16 +173,17 @@ export function BudgetCharts() {
 
         {viewMode === 'donut' ? (
           <div className="grid grid-cols-1 md:grid-cols-12 items-center gap-4">
-            <div className="md:col-span-7 h-[240px] w-full">
+            {/* Donut Chart with Perfectly Centered Summary Label */}
+            <div className="md:col-span-7 h-[250px] w-full relative flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={donutData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={55}
-                    outerRadius={85}
-                    paddingAngle={2}
+                    innerRadius={65}
+                    outerRadius={92}
+                    paddingAngle={3}
                     dataKey="value"
                     onClick={handlePieClick}
                     cursor="pointer"
@@ -186,14 +197,19 @@ export function BudgetCharts() {
                       />
                     ))}
                   </Pie>
-                  <RechartsTooltip
-                    formatter={(val: any) => [
-                      formatCurrency(Number(val), 'BDT', language),
-                      t('selectedBudget'),
-                    ]}
-                  />
+                  <RechartsTooltip content={<CustomDonutTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
+
+              {/* Seamless Center Badge inside Donut Hole */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none text-center px-2">
+                <span className="text-[10px] font-medium text-muted-foreground leading-none">
+                  {t('selectedBudget')}
+                </span>
+                <span className="text-sm sm:text-base font-black font-mono text-foreground mt-1 leading-tight tracking-tight">
+                  {formatCurrency(budget.totalSelectedBDT, 'BDT', language)}
+                </span>
+              </div>
             </div>
 
             {/* Legend list */}
@@ -209,7 +225,7 @@ export function BudgetCharts() {
                   <button
                     key={d.id}
                     onClick={() => handlePieClick(d)}
-                    className={`w-full flex items-center justify-between p-1.5 rounded-lg transition-all text-left cursor-pointer ${
+                    className={`w-full flex items-center justify-between p-2 rounded-xl transition-all text-left cursor-pointer ${
                       isSelected
                         ? 'bg-primary/10 ring-1 ring-primary'
                         : 'hover:bg-muted/40'
@@ -223,7 +239,7 @@ export function BudgetCharts() {
                       <span className="truncate font-medium">{d.name}</span>
                     </div>
                     <div className="flex items-center gap-2 font-mono shrink-0 ml-2">
-                      <span>{formatCurrency(d.value, 'BDT', language)}</span>
+                      <span className="font-semibold">{formatCurrency(d.value, 'BDT', language)}</span>
                       <span className="text-muted-foreground w-7 text-right font-sans text-[11px]">
                         {formatNumber(percent, language)}%
                       </span>
@@ -259,11 +275,17 @@ export function BudgetCharts() {
                       ? t('actualSpent')
                       : t('maxBudget'),
                   ]}
+                  contentStyle={{
+                    borderRadius: '0.75rem',
+                    border: '1px solid var(--border)',
+                    backgroundColor: 'var(--card)',
+                    fontSize: '12px',
+                  }}
                 />
                 <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '6px' }} />
-                <Bar dataKey="min" fill="#94a3b8" name={t('minBudget')} radius={[3, 3, 0, 0]} />
-                <Bar dataKey="selected" fill="#0284c7" name={t('selectedBudget')} radius={[3, 3, 0, 0]} />
-                <Bar dataKey="actual" fill="#10b981" name={t('actualSpent')} radius={[3, 3, 0, 0]} />
+                <Bar dataKey="min" fill="#94a3b8" name={t('minBudget')} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="selected" fill="#0284c7" name={t('selectedBudget')} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="actual" fill="#10b981" name={t('actualSpent')} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

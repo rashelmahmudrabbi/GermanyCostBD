@@ -142,39 +142,61 @@ export function ExportShare() {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          {/* Print/PDF */}
-          <Button
-            variant="outline"
-            size="sm"
+        {/* Special Action Buttons Grid */}
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+          {/* 1. PDF / Print Button */}
+          <button
             onClick={handlePrint}
-            className="h-10 text-xs flex flex-col items-center justify-center gap-1 py-1"
+            className="group relative flex items-center gap-3 p-3 rounded-xl border border-border/80 bg-card hover:bg-blue-500/5 hover:border-blue-500/40 transition-all duration-200 text-left cursor-pointer active:scale-[0.98] shadow-2xs hover:shadow-xs min-h-[60px]"
           >
-            <Printer className="h-4 w-4" />
-            <span>{t('exportPDF')}</span>
-          </Button>
+            <div className="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-blue-500/20 transition-all">
+              <Printer className="h-4 w-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-foreground leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                {t('exportPDF')}
+              </p>
+              <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 truncate">
+                {language === 'bn' ? 'প্রিন্ট ও রিপোর্ট' : 'Printable PDF'}
+              </p>
+            </div>
+          </button>
 
-          {/* Export JSON */}
-          <Button
-            variant="outline"
-            size="sm"
+          {/* 2. Export JSON Button */}
+          <button
             onClick={handleExportJSON}
-            className="h-10 text-xs flex flex-col items-center justify-center gap-1 py-1"
+            className="group relative flex items-center gap-3 p-3 rounded-xl border border-border/80 bg-card hover:bg-emerald-500/5 hover:border-emerald-500/40 transition-all duration-200 text-left cursor-pointer active:scale-[0.98] shadow-2xs hover:shadow-xs min-h-[60px]"
           >
-            <Download className="h-4 w-4" />
-            <span>{t('exportJSON')}</span>
-          </Button>
+            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-emerald-500/20 transition-all">
+              <Download className="h-4 w-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-foreground leading-snug group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                {t('exportJSON')}
+              </p>
+              <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 truncate">
+                {language === 'bn' ? 'ব্যাকআপ সেভ' : 'Download JSON'}
+              </p>
+            </div>
+          </button>
 
-          {/* Import JSON */}
-          <Button
-            variant="outline"
-            size="sm"
+          {/* 3. Import JSON Button */}
+          <button
             onClick={() => fileInputRef.current?.click()}
-            className="h-10 text-xs flex flex-col items-center justify-center gap-1 py-1"
+            className="group relative flex items-center gap-3 p-3 rounded-xl border border-border/80 bg-card hover:bg-amber-500/5 hover:border-amber-500/40 transition-all duration-200 text-left cursor-pointer active:scale-[0.98] shadow-2xs hover:shadow-xs min-h-[60px]"
           >
-            <Upload className="h-4 w-4" />
-            <span>{t('importJSON')}</span>
-          </Button>
+            <div className="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-amber-500/20 transition-all">
+              <Upload className="h-4 w-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-foreground leading-snug group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                {t('importJSON')}
+              </p>
+              <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 truncate">
+                {language === 'bn' ? 'ফাইল আপলোড' : 'Restore JSON'}
+              </p>
+            </div>
+          </button>
           <input
             ref={fileInputRef}
             type="file"
@@ -183,21 +205,28 @@ export function ExportShare() {
             className="hidden"
           />
 
-          {/* Share Link */}
-          <Button
-            variant="outline"
-            size="sm"
+          {/* 4. Share Link Button */}
+          <button
             onClick={handleGenerateShareLink}
-            className="h-10 text-xs flex flex-col items-center justify-center gap-1 py-1"
+            className="group relative flex items-center gap-3 p-3 rounded-xl border border-border/80 bg-card hover:bg-violet-500/5 hover:border-violet-500/40 transition-all duration-200 text-left cursor-pointer active:scale-[0.98] shadow-2xs hover:shadow-xs min-h-[60px]"
           >
-            {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Share2 className="h-4 w-4" />}
-            <span>{copied ? t('copied') : t('shareLink')}</span>
-          </Button>
+            <div className="w-9 h-9 rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-violet-500/20 transition-all">
+              {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Share2 className="h-4 w-4" />}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-foreground leading-snug group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
+                {copied ? t('copied') : t('shareLink')}
+              </p>
+              <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 truncate">
+                {language === 'bn' ? 'লিংক তৈরি করুন' : 'Read-only link'}
+              </p>
+            </div>
+          </button>
         </div>
 
         {/* Share link input if generated */}
         {shareUrl && (
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/60 border text-xs">
+          <div className="flex items-center gap-2 p-2.5 rounded-xl bg-muted/60 border border-border/70 text-xs">
             <input
               type="text"
               readOnly
@@ -206,13 +235,13 @@ export function ExportShare() {
             />
             <Button
               size="sm"
-              variant="ghost"
+              variant="outline"
               onClick={() => {
                 navigator.clipboard.writeText(shareUrl);
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
               }}
-              className="h-7 px-2 text-xs"
+              className="h-7 px-2.5 text-xs font-medium cursor-pointer"
             >
               <Copy className="h-3.5 w-3.5 mr-1" />
               {t('copied')}
@@ -220,17 +249,18 @@ export function ExportShare() {
           </div>
         )}
 
-        {/* Reset Button */}
-        <div className="pt-2 border-t flex justify-end">
-          <Button
-            variant="ghost"
-            size="sm"
+        {/* Reset Action */}
+        <div className="pt-3 border-t border-border/60 flex items-center justify-between">
+          <span className="text-[11px] text-muted-foreground">
+            {language === 'bn' ? 'সবকিছু ডিফল্ট করতে চান?' : 'Need a fresh start?'}
+          </span>
+          <button
             onClick={() => setResetDialogOpen(true)}
-            className="text-xs text-muted-foreground hover:text-destructive h-8 gap-1.5"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 border border-transparent hover:border-destructive/20 transition-colors cursor-pointer"
           >
             <RotateCcw className="h-3.5 w-3.5" />
-            {t('resetDefaults')}
-          </Button>
+            <span>{t('resetDefaults')}</span>
+          </button>
         </div>
       </CardContent>
 

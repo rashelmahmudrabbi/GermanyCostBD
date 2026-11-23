@@ -84,10 +84,10 @@ export function HeroSection() {
                 <button
                   key={key}
                   onClick={() => handleQuickPreset(key)}
-                  className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+                  className={`px-3 py-1 rounded-lg font-medium transition-all cursor-pointer ${
                     isSelected
                       ? 'bg-background text-foreground shadow-2xs font-semibold'
-                      : 'text-muted-foreground hover:text-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/40'
                   }`}
                 >
                   {language === 'bn' ? p?.labelBn : p?.labelEn}
