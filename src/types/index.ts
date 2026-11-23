@@ -1,5 +1,5 @@
 // Cost item types
-export type CostType = 'fee' | 'refundable' | 'released-monthly';
+export type CostType = 'fee' | 'refundable' | 'released-monthly' | 'optional';
 export type Currency = 'BDT' | 'EUR';
 export type Language = 'bn' | 'en';
 export type Theme = 'light' | 'dark' | 'system';
@@ -95,17 +95,34 @@ export interface TimelineDeadline {
   labelEn: string;
   date: Date;
   completed: boolean;
+  status: 'upcoming' | 'overdue' | 'completed';
+  relativeMonths: number;
 }
 
 export interface BudgetSummary {
-  totalMin: number;
-  totalMax: number;
-  totalSelected: number;
-  totalActual: number;
+  // 1. Non-recoverable costs (fees, flight, prep, initial shopping, pocket money, insurance, etc.)
+  sunkMinBDT: number;
+  sunkMaxBDT: number;
+  sunkSelectedBDT: number;
+  sunkActualBDT: number;
+
+  // 2. Funds you still own (blocked account released monthly, refundable housing deposit)
+  retainedMinBDT: number;
+  retainedMaxBDT: number;
+  retainedSelectedBDT: number;
+  retainedActualBDT: number;
+
+  // 3. Combined total funds needed
   totalMinBDT: number;
   totalMaxBDT: number;
   totalSelectedBDT: number;
   totalActualBDT: number;
+
+  totalMin: number;
+  totalMax: number;
+  totalSelected: number;
+  totalActual: number;
+
   byCategory: Record<string, {
     min: number;
     max: number;
@@ -115,6 +132,7 @@ export interface BudgetSummary {
     maxBDT: number;
     selectedBDT: number;
     actualBDT: number;
+    isRetained?: boolean;
   }>;
   arrangedCount: number;
   totalCount: number;

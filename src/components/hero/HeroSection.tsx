@@ -5,11 +5,10 @@ import { motion, useSpring, useTransform } from 'framer-motion';
 import { useStore } from '@/lib/store';
 import { useT } from '@/lib/i18n';
 import { calculateBudget, getEffectiveRate, applyScenario } from '@/lib/budget';
-import { formatCurrency, toBanglaDigits, formatRelativeTime } from '@/lib/utils';
+import { formatCurrency, formatNumber } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import costsData from '@/data/costs.json';
-import { ProgressRing } from './ProgressRing';
-import { Sparkles, Wallet, ShieldCheck, CheckCircle2, ArrowDownRight, TrendingUp } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, Wallet, ArrowRight, HelpCircle } from 'lucide-react';
 
 function AnimatedNumber({
   value,
@@ -20,7 +19,7 @@ function AnimatedNumber({
   currency: 'BDT' | 'EUR';
   language: 'bn' | 'en';
 }) {
-  const spring = useSpring(0, { stiffness: 60, damping: 22 });
+  const spring = useSpring(0, { stiffness: 65, damping: 24 });
   const display = useTransform(spring, (v) => formatCurrency(Math.round(v), currency, language));
   const [displayValue, setDisplayValue] = useState(formatCurrency(0, currency, language));
 
@@ -36,12 +35,7 @@ function AnimatedNumber({
 export function HeroSection() {
   const t = useT();
   const { items, setItems, exchangeRate, language } = useStore();
-  const [relativeTime, setRelativeTime] = useState<string>('');
   const [activePreset, setActivePreset] = useState<'budget' | 'standard' | 'comfortable'>('standard');
-
-  useEffect(() => {
-    setRelativeTime(formatRelativeTime(exchangeRate.timestamp, language));
-  }, [exchangeRate.timestamp, language]);
 
   const categories = costsData.categories as any[];
   const presets = costsData.scenarios as Record<string, any>;
@@ -53,7 +47,7 @@ export function HeroSection() {
 
   const budget = calculateBudget(items, effectiveRate, 0, categories);
   const progressPercent = budget.totalCount > 0 ? Math.round((budget.arrangedCount / budget.totalCount) * 100) : 0;
-  const remaining = budget.totalSelectedBDT - budget.totalActualBDT;
+  const sunkRemaining = Math.max(0, budget.sunkSelectedBDT - budget.sunkActualBDT);
 
   const handleQuickPreset = (presetKey: 'budget' | 'standard' | 'comfortable') => {
     setActivePreset(presetKey);
@@ -64,31 +58,23 @@ export function HeroSection() {
   };
 
   return (
-    <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/10 via-card to-background border border-border/80 p-6 md:p-8 shadow-sm">
-      {/* Decorative ambient gradient blooms */}
-      <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
-
-      <div className="relative z-10 space-y-6">
-        {/* Top Header & Presets Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="outline" className="text-xs px-3 py-1 bg-background/80 font-medium border-primary/30 text-primary">
-              <Sparkles className="h-3 w-3 mr-1.5 text-amber-500" />
-              <span>{t('appTagline')}</span>
-            </Badge>
-
-            <span className="text-xs text-muted-foreground hidden md:inline">•</span>
-
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>{t('blockedAccountNotice')}</span>
+    <section className="relative overflow-hidden rounded-3xl bg-card border border-border/70 p-5 sm:p-7 shadow-xs">
+      <div className="relative z-10 space-y-5">
+        {/* Top Control Bar: Category indicator & Quick Preset Switcher */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-border/40">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-primary uppercase tracking-wide">
+              {t('heroHeadline')}
+            </span>
+            <span className="text-xs text-muted-foreground">•</span>
+            <span className="text-xs text-muted-foreground">
+              {t('heroHeadlineDesc')}
             </span>
           </div>
 
-          {/* Quick Preset Selector */}
-          <div className="flex items-center gap-1 bg-background/90 backdrop-blur p-1 rounded-xl border border-border/80 text-xs shrink-0 self-start sm:self-auto">
-            <span className="text-[11px] font-semibold text-muted-foreground px-2 hidden sm:inline">
+          {/* Unified Preset Switcher */}
+          <div className="flex items-center bg-muted/60 p-1 rounded-xl border border-border/60 text-xs self-start sm:self-auto">
+            <span className="text-[11px] font-medium text-muted-foreground px-2 hidden sm:inline">
               {t('quickPresets')}:
             </span>
             {(['budget', 'standard', 'comfortable'] as const).map((key) => {
@@ -100,8 +86,8 @@ export function HeroSection() {
                   onClick={() => handleQuickPreset(key)}
                   className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
                     isSelected
-                      ? 'bg-primary text-primary-foreground shadow-xs'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                      ? 'bg-background text-foreground shadow-2xs font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   {language === 'bn' ? p?.labelBn : p?.labelEn}
@@ -111,116 +97,123 @@ export function HeroSection() {
           </div>
         </div>
 
-        {/* Hero Budget Main Display */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          <div className="space-y-3">
-            <div>
-              <p className="text-xs md:text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                {t('totalBudgetRange')}
-              </p>
-              <div className="flex items-baseline gap-2 md:gap-3 flex-wrap">
-                <motion.div
-                  className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight font-mono text-foreground"
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4 }}
-                >
-                  <AnimatedNumber value={budget.totalMinBDT} currency="BDT" language={language} />
-                </motion.div>
-                <span className="text-muted-foreground/60 text-2xl md:text-3xl font-light">—</span>
-                <motion.div
-                  className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight font-mono text-foreground"
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.1 }}
-                >
-                  <AnimatedNumber value={budget.totalMaxBDT} currency="BDT" language={language} />
-                </motion.div>
-              </div>
+        {/* PRIMARY HEADLINE: Non-Recoverable Sunk Costs */}
+        <div className="space-y-2">
+          <div className="flex flex-col md:flex-row md:items-baseline gap-2 md:gap-4">
+            <div className="flex items-baseline gap-2 md:gap-3 flex-wrap">
+              <motion.div
+                className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight font-mono text-foreground"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <AnimatedNumber value={budget.sunkMinBDT} currency="BDT" language={language} />
+              </motion.div>
+              <span className="text-muted-foreground/50 text-2xl font-light">—</span>
+              <motion.div
+                className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight font-mono text-foreground"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.05 }}
+              >
+                <AnimatedNumber value={budget.sunkMaxBDT} currency="BDT" language={language} />
+              </motion.div>
             </div>
 
-            <p className="text-xs text-muted-foreground max-w-xl leading-relaxed">
-              {language === 'bn'
-                ? 'আইইএলটিএস, আবেদন ফি, বিমান টিকেট, প্রথম মাসের থাকা-খাওয়া এবং ১ বছরের ব্লকড একাউন্ট (€১১,৯০৪) সহ আনুমানিক পূর্ণাঙ্গ হিসাব।'
-                : 'Complete estimated budget including IELTS, applications, flights, deposit, initial living costs, and 12-month blocked account (€11,904).'}
-            </p>
+            <Badge variant="secondary" className="font-mono text-xs font-semibold px-2.5 py-0.5 w-fit">
+              {language === 'bn' ? 'নির্বাচিত: ' : 'Selected: '}
+              <AnimatedNumber value={budget.sunkSelectedBDT} currency="BDT" language={language} />
+            </Badge>
           </div>
 
-          {/* Progress Ring & Live Chip */}
-          <div className="flex items-center gap-5 p-3 rounded-2xl bg-background/60 backdrop-blur border border-border/60 shrink-0">
-            <ProgressRing
-              percent={progressPercent}
-              arranged={budget.arrangedCount}
-              total={budget.totalCount}
-              language={language}
-              size={90}
-            />
+          {/* Micro Disclaimer under hero total */}
+          <p className="text-xs text-muted-foreground flex items-center gap-1.5 pt-0.5">
+            <span>{t('disclaimerShort')}</span>
+          </p>
+        </div>
 
-            <div className="space-y-1.5">
-              <a
-                href="#exchange-rate"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-primary font-mono text-sm font-bold hover:bg-primary/15 transition-all"
-                title="View and adjust live exchange rate and margin"
-              >
-                <span>€1 = ৳{language === 'bn' ? toBanglaDigits(effectiveRate.toFixed(2)) : effectiveRate.toFixed(2)}</span>
-                <ArrowDownRight className="h-3.5 w-3.5 text-primary" />
-              </a>
-              <p className="text-[11px] text-muted-foreground">
-                {t('rateUpdated')}: {relativeTime || (language === 'bn' ? 'সম্প্রতি' : 'recently')}
-              </p>
-              <div className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-                <CheckCircle2 className="h-3 w-3" />
-                <span>
-                  {language === 'bn'
-                    ? `${toBanglaDigits(String(budget.arrangedCount))}টি ধাপ প্রস্তুত`
-                    : `${budget.arrangedCount} items arranged`}
-                </span>
-              </div>
+        {/* SECONDARY ROW: Funds You Still Own vs Combined Total */}
+        <div className="p-3.5 rounded-2xl bg-muted/40 border border-border/60 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+            <div>
+              <span className="font-semibold text-foreground">{t('retainedFunds')}: </span>
+              <span className="font-mono font-bold text-foreground">
+                <AnimatedNumber value={budget.retainedSelectedBDT} currency="BDT" language={language} />
+              </span>
+              <span className="text-muted-foreground ml-1.5">
+                ({t('retainedFundsDesc')})
+              </span>
             </div>
+          </div>
+
+          <div className="pt-2 md:pt-0 border-t md:border-t-0 border-border/40 flex items-center gap-2 shrink-0">
+            <span className="text-muted-foreground">{t('combinedTotal')}:</span>
+            <span className="font-mono font-bold text-sm text-foreground">
+              <AnimatedNumber value={budget.totalSelectedBDT} currency="BDT" language={language} />
+            </span>
           </div>
         </div>
 
-        {/* 3 Metric Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-          {/* Selected Budget */}
-          <div className="p-4 rounded-2xl bg-background/80 backdrop-blur border border-border/70 shadow-2xs space-y-1">
+        {/* Thin Progress Bar for preparation */}
+        <div className="space-y-1.5 pt-1">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span className="font-medium">
+              {language === 'bn' ? 'প্রস্তুতি অগ্রগতি' : 'Preparation Progress'}
+            </span>
+            <span className="font-mono">
+              {language === 'bn'
+                ? `${formatNumber(budget.arrangedCount, language)} / ${formatNumber(budget.totalCount, language)} (${formatNumber(progressPercent, language)}%)`
+                : `${budget.arrangedCount} / ${budget.totalCount} (${progressPercent}%)`}
+            </span>
+          </div>
+          <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+            <motion.div
+              className="h-full bg-primary rounded-full transition-all duration-500"
+              initial={{ width: 0 }}
+              animate={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </div>
+
+        {/* 3 Metric Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+          <div className="p-3.5 rounded-xl bg-background border border-border/60 space-y-1">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-semibold">{t('selectedBudget')}</span>
-              <Wallet className="h-4 w-4 text-primary" />
+              <span className="text-xs font-medium">{t('selectedBudget')}</span>
+              <Wallet className="h-3.5 w-3.5 text-primary" />
             </div>
-            <p className="text-xl md:text-2xl font-bold font-mono text-foreground">
-              <AnimatedNumber value={budget.totalSelectedBDT} currency="BDT" language={language} />
+            <p className="text-lg font-bold font-mono text-foreground">
+              <AnimatedNumber value={budget.sunkSelectedBDT} currency="BDT" language={language} />
             </p>
-            <p className="text-[11px] text-muted-foreground">
-              {language === 'bn' ? 'আপনার বর্তমান পছন্দের মোট খরচ' : 'Based on your custom estimates'}
+            <p className="text-[10px] text-muted-foreground">
+              {language === 'bn' ? 'অফেরতযোগ্য মূল খরচ' : 'Direct upfront costs'}
             </p>
           </div>
 
-          {/* Actual Spent */}
-          <div className="p-4 rounded-2xl bg-emerald-500/5 backdrop-blur border border-emerald-500/20 shadow-2xs space-y-1">
-            <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-300">
-              <span className="text-xs font-semibold">{t('actualSpent')}</span>
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+          <div className="p-3.5 rounded-xl bg-background border border-border/60 space-y-1">
+            <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-400">
+              <span className="text-xs font-medium">{t('actualSpent')}</span>
+              <CheckCircle2 className="h-3.5 w-3.5" />
             </div>
-            <p className="text-xl md:text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
-              <AnimatedNumber value={budget.totalActualBDT} currency="BDT" language={language} />
+            <p className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">
+              <AnimatedNumber value={budget.sunkActualBDT} currency="BDT" language={language} />
             </p>
-            <p className="text-[11px] text-muted-foreground">
-              {language === 'bn' ? 'যা ইতিমধ্যে পরিশোধ করা হয়েছে' : 'Total money already paid out'}
+            <p className="text-[10px] text-muted-foreground">
+              {language === 'bn' ? 'ইতিমধ্যে পরিশোধিত' : 'Paid out so far'}
             </p>
           </div>
 
-          {/* Remaining */}
-          <div className="p-4 rounded-2xl bg-amber-500/5 backdrop-blur border border-amber-500/20 shadow-2xs space-y-1">
-            <div className="flex items-center justify-between text-amber-700 dark:text-amber-300">
-              <span className="text-xs font-semibold">{t('remaining')}</span>
-              <TrendingUp className="h-4 w-4 text-amber-500" />
+          <div className="p-3.5 rounded-xl bg-background border border-border/60 space-y-1">
+            <div className="flex items-center justify-between text-amber-700 dark:text-amber-400">
+              <span className="text-xs font-medium">{t('remaining')}</span>
+              <ArrowRight className="h-3.5 w-3.5" />
             </div>
-            <p className="text-xl md:text-2xl font-bold font-mono text-amber-600 dark:text-amber-400">
-              <AnimatedNumber value={Math.max(0, remaining)} currency="BDT" language={language} />
+            <p className="text-lg font-bold font-mono text-amber-600 dark:text-amber-400">
+              <AnimatedNumber value={sunkRemaining} currency="BDT" language={language} />
             </p>
-            <p className="text-[11px] text-muted-foreground">
-              {language === 'bn' ? 'আরও যত টাকা প্রস্তুত রাখা প্রয়োজন' : 'Funds still needed to arrange'}
+            <p className="text-[10px] text-muted-foreground">
+              {language === 'bn' ? 'আরও জোগাড় করতে হবে' : 'Pending to arrange'}
             </p>
           </div>
         </div>

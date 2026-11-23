@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import costsData from '@/data/costs.json';
-import { Layers, Plus, Trash2, CheckCircle2 } from 'lucide-react';
+import { Layers, Plus, Trash2, CheckCircle2, BookmarkPlus, Sparkles } from 'lucide-react';
 
 export function ScenarioCompare() {
   const t = useT();
@@ -28,7 +28,6 @@ export function ScenarioCompare() {
     exchangeRate.bankMargin
   );
 
-  // Apply to current items
   const handleApplyPresetAndCity = (presetKey: string, cityKey: string) => {
     const preset = presets[presetKey];
     const city = cities[cityKey];
@@ -38,7 +37,6 @@ export function ScenarioCompare() {
     setItems(newItems);
   };
 
-  // Save current configuration as a scenario
   const handleSaveCurrentScenario = () => {
     if (scenarios.length >= 3) return;
 
@@ -47,7 +45,7 @@ export function ScenarioCompare() {
 
     const newScenario = {
       id: `scenario-${Date.now()}`,
-      name: `${presetName} (${cityName})`,
+      name: `${presetName} · ${cityName}`,
       preset: selectedPreset,
       city: selectedCity,
       items: JSON.parse(JSON.stringify(items)),
@@ -56,21 +54,20 @@ export function ScenarioCompare() {
     addScenario(newScenario);
   };
 
-  // Pre-calculate budgets for comparison cards
   const currentBudget = calculateBudget(items, effectiveRate, 0, categories as any[]);
 
   return (
-    <Card className="scroll-mt-24 border-border/80 shadow-sm" id="scenario-compare">
+    <Card className="scroll-mt-24 border-border/70 shadow-xs" id="scenarios">
       <CardHeader className="pb-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <CardTitle className="text-lg md:text-xl font-bold flex items-center gap-2">
-              <Layers className="h-5 w-5 text-primary" />
+            <CardTitle className="text-base md:text-lg font-bold flex items-center gap-2">
+              <Layers className="h-4 w-4 text-primary" />
               <span>{t('scenarioCompare')}</span>
             </CardTitle>
             <CardDescription className="text-xs">
               {language === 'bn'
-                ? 'সাশ্রয়ী, মানসম্মত বা আরামদায়ক বাজেট এবং শহরের ভিত্তিতে খরচ তুলনা করুন'
+                ? 'সাশ্রয়ী, মানসম্মত বা আরামদায়ক লাইফস্টাইল এবং শহরভেদে খরচের প্রভাব তুলনা করুন'
                 : 'Compare costs across Budget, Standard, or Comfortable living and various German cities'}
             </CardDescription>
           </div>
@@ -80,22 +77,22 @@ export function ScenarioCompare() {
             variant="outline"
             onClick={handleSaveCurrentScenario}
             disabled={scenarios.length >= 3}
-            className="text-xs h-8 gap-1.5"
+            className="text-xs h-8 gap-1.5 cursor-pointer w-fit"
           >
-            <Plus className="h-3.5 w-3.5" />
-            {t('addScenario')} ({scenarios.length}/3)
+            <BookmarkPlus className="h-3.5 w-3.5" />
+            <span>{t('addScenario')} ({scenarios.length}/3)</span>
           </Button>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-6">
-        {/* Preset & City Configurator */}
-        <div className="p-4 rounded-xl bg-muted/40 border border-border/60 space-y-4">
+      <CardContent className="space-y-5">
+        {/* Presets & City Configurator */}
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-muted/40 border border-border/60 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Preset Selector */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                {language === 'bn' ? 'বাজেট ধরণ নির্বাচন' : 'Preset Style'}
+                {language === 'bn' ? 'বাজেট ধরন' : 'Budget Style'}
               </label>
               <div className="grid grid-cols-3 gap-1.5">
                 {(['budget', 'standard', 'comfortable'] as const).map((key) => {
@@ -108,15 +105,15 @@ export function ScenarioCompare() {
                         setSelectedPreset(key);
                         handleApplyPresetAndCity(key, selectedCity);
                       }}
-                      className={`p-2 rounded-lg text-xs font-medium border text-center transition-all ${
+                      className={`p-2 rounded-xl text-xs font-medium border text-center transition-all cursor-pointer ${
                         isActive
-                          ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                          : 'bg-background hover:bg-muted text-foreground border-border'
+                          ? 'bg-primary text-primary-foreground border-primary shadow-2xs font-semibold'
+                          : 'bg-background hover:bg-muted/80 text-foreground border-border/60'
                       }`}
                     >
-                      <p className="font-semibold">{language === 'bn' ? p.labelBn : p.labelEn}</p>
-                      <p className="text-[10px] opacity-80 mt-0.5">
-                        {key === 'budget' ? '-15%' : key === 'standard' ? 'গড়' : '+25%'}
+                      <p>{language === 'bn' ? p.labelBn : p.labelEn}</p>
+                      <p className="text-[10px] opacity-75 mt-0.5 font-mono">
+                        {key === 'budget' ? '-15%' : key === 'standard' ? '1.0x' : '+25%'}
                       </p>
                     </button>
                   );
@@ -125,7 +122,7 @@ export function ScenarioCompare() {
             </div>
 
             {/* City Selector */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                 {t('city')}
               </label>
@@ -136,15 +133,15 @@ export function ScenarioCompare() {
                   handleApplyPresetAndCity(selectedPreset, val);
                 }}
               >
-                <SelectTrigger className="h-9 bg-background">
+                <SelectTrigger className="h-9 bg-background font-medium text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(cities).map(([key, c]: [string, any]) => (
-                    <SelectItem key={key} value={key}>
-                      <span className="font-medium">{language === 'bn' ? c.labelBn : c.labelEn}</span>
-                      <span className="text-xs text-muted-foreground ml-2 font-mono">
-                        (ভাড়া: {c.rentMultiplier > 1 ? `+${Math.round((c.rentMultiplier - 1) * 100)}%` : `${Math.round((c.rentMultiplier - 1) * 100)}%`})
+                    <SelectItem key={key} value={key} className="text-xs">
+                      <span>{language === 'bn' ? c.labelBn : c.labelEn}</span>
+                      <span className="text-[11px] text-muted-foreground ml-2 font-mono">
+                        ({c.rentMultiplier > 1 ? `+${Math.round((c.rentMultiplier - 1) * 100)}%` : `${Math.round((c.rentMultiplier - 1) * 100)}%`})
                       </span>
                     </SelectItem>
                   ))}
@@ -152,35 +149,40 @@ export function ScenarioCompare() {
               </Select>
               <p className="text-[11px] text-muted-foreground">
                 {language === 'bn'
-                  ? 'শহরের বাড়িভাড়া ও জীবনযাত্রার খরচের তারতম্য স্বয়ংক্রিয়ভাবে সমন্বয় করা হয়।'
-                  : 'Adjusts rent and living costs according to average municipal indexes.'}
+                  ? 'শহরভেদে বাসাভাড়া ও জীবনযাত্রার খরচের গড় হিসাব সমন্বয় করা হয়।'
+                  : 'Adjusts local rent and daily living expenses per city cost index.'}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Side-by-side comparison cards if scenarios saved */}
-        {scenarios.length > 0 && (
+        {/* Saved Scenarios Comparison Cards */}
+        {scenarios.length === 0 ? (
+          <div className="text-center py-8 px-4 border border-dashed rounded-2xl bg-muted/20 text-muted-foreground space-y-2">
+            <Sparkles className="h-6 w-6 mx-auto text-primary opacity-60" />
+            <p className="font-semibold text-xs text-foreground">
+              {language === 'bn' ? 'কোনো দৃশ্যপট সংরক্ষিত নেই' : 'No saved scenarios yet'}
+            </p>
+            <p className="text-[11px] max-w-sm mx-auto">
+              {language === 'bn'
+                ? 'বিভিন্ন শহর ও বাজেটের মধ্যে সরাসরি তুলনা দেখতে উপরের "+ দৃশ্যপট যোগ করুন" বাটনে ক্লিক করুন।'
+                : 'Click "+ Add Scenario" above to save and compare up to 3 customized budget variations.'}
+            </p>
+          </div>
+        ) : (
           <div className="space-y-3">
-            <h4 className="text-sm font-semibold flex items-center justify-between">
-              <span>{language === 'bn' ? 'সংরক্ষিত পরিকল্পনাসমূহ' : 'Saved Scenarios Comparison'}</span>
-              <span className="text-xs text-muted-foreground font-normal">
-                {language === 'bn' ? 'সর্বোচ্চ ৩টি দৃশ্যপট একসাথে তুলনা করুন' : 'Compare up to 3 scenarios'}
-              </span>
-            </h4>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               {scenarios.map((sc) => {
                 const scBudget = calculateBudget(sc.items, effectiveRate, 0, categories as any[]);
-                const diffWithCurrent = scBudget.totalSelectedBDT - currentBudget.totalSelectedBDT;
+                const diffSunk = scBudget.sunkSelectedBDT - currentBudget.sunkSelectedBDT;
 
                 return (
                   <div
                     key={sc.id}
-                    className="border rounded-xl p-3.5 bg-card hover:border-primary/50 transition-all flex flex-col justify-between"
+                    className="border rounded-2xl p-3.5 bg-card hover:border-primary/40 transition-all flex flex-col justify-between space-y-3"
                   >
                     <div>
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center justify-between mb-1.5">
                         <Badge variant="secondary" className="font-medium text-xs">
                           {sc.name}
                         </Badge>
@@ -194,18 +196,24 @@ export function ScenarioCompare() {
                         </Button>
                       </div>
 
-                      <div className="space-y-1 my-3">
-                        <p className="text-xs text-muted-foreground">{t('selectedBudget')}</p>
-                        <p className="text-lg font-bold font-mono text-foreground">
-                          {formatCurrency(scBudget.totalSelectedBDT, 'BDT', language)}
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-muted-foreground block">{t('heroHeadline')}</span>
+                        <p className="text-base font-bold font-mono text-foreground">
+                          {formatCurrency(scBudget.sunkSelectedBDT, 'BDT', language)}
                         </p>
-                        <p className="text-[11px] font-mono text-muted-foreground">
-                          {diffWithCurrent === 0 ? (
-                            <span className="text-emerald-600">✓ {language === 'bn' ? 'বর্তমানটির সমান' : 'Matches current'}</span>
-                          ) : diffWithCurrent > 0 ? (
-                            <span className="text-amber-600">+{formatCurrency(diffWithCurrent, 'BDT', language)} {language === 'bn' ? 'বেশি' : 'higher'}</span>
+                        <p className="text-[11px] font-mono">
+                          {diffSunk === 0 ? (
+                            <span className="text-muted-foreground">
+                              {language === 'bn' ? 'বর্তমানটির সমান' : 'Matches current'}
+                            </span>
+                          ) : diffSunk > 0 ? (
+                            <span className="text-amber-600 dark:text-amber-400 font-semibold">
+                              +{formatCurrency(diffSunk, 'BDT', language)} {language === 'bn' ? 'বেশি' : 'more'}
+                            </span>
                           ) : (
-                            <span className="text-emerald-600">-{formatCurrency(Math.abs(diffWithCurrent), 'BDT', language)} {language === 'bn' ? 'কম' : 'lower'}</span>
+                            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                              -{formatCurrency(Math.abs(diffSunk), 'BDT', language)} {language === 'bn' ? 'কম' : 'less'}
+                            </span>
                           )}
                         </p>
                       </div>
@@ -215,10 +223,10 @@ export function ScenarioCompare() {
                       size="sm"
                       variant="outline"
                       onClick={() => setItems(sc.items)}
-                      className="w-full text-xs h-7 mt-2"
+                      className="w-full text-xs h-7.5 gap-1 cursor-pointer"
                     >
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      {language === 'bn' ? 'এটি সক্রিয় করুন' : 'Load this scenario'}
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <span>{language === 'bn' ? 'এটি সক্রিয় করুন' : 'Load Plan'}</span>
                     </Button>
                   </div>
                 );

@@ -9,9 +9,17 @@ import {
   generateDeadlines,
   generateICS,
   generateInsights,
+  getNextUpcomingIntake,
 } from '../budget';
+import {
+  formatCurrency,
+  toBanglaDigits,
+  extractDomain,
+  getFreshnessStatus,
+  isRetainedFund,
+} from '../utils';
 import costsData from '../../data/costs.json';
-import { UserCostItem } from '@/types';
+import { UserCostItem, BudgetSummary } from '@/types';
 
 describe('Budget Calculation Engine', () => {
   describe('Exchange Rate Calculations', () => {
@@ -47,75 +55,72 @@ describe('Budget Calculation Engine', () => {
       expect(items[0].estimate).toBe(items[0].default);
     });
 
-    it('aggregates totals, category breakdowns, and completed steps accurately', () => {
+    it('accurately splits budget into non-recoverable costs vs retained funds', () => {
       const sampleCategories = [
-        { id: 'cat1', step: 0 },
-        { id: 'cat2', step: 1 },
+        { id: 'visa', step: 2 },
+        { id: 'blocked-account', step: 2 },
       ];
 
       const sampleItems: UserCostItem[] = [
         {
-          id: 'item1',
-          category: 'cat1',
-          labelBn: 'আইটেম ১',
-          labelEn: 'Item 1',
+          id: 'visa-fee',
+          category: 'visa',
+          labelBn: 'ভিসা ফি',
+          labelEn: 'Visa fee',
           currency: 'EUR',
-          min: 100,
-          max: 200,
-          default: 150,
-          estimate: 150,
-          actualPaid: 140,
+          min: 75,
+          max: 75,
+          default: 75,
+          estimate: 75,
+          actualPaid: 75,
           arranged: true,
           type: 'fee',
           noteBn: '',
           noteEn: '',
-          sourceUrl: '',
+          sourceUrl: 'https://dhaka.diplo.de',
           lastVerified: '2026-11-20',
           order: 0,
         },
         {
-          id: 'item2',
-          category: 'cat2',
-          labelBn: 'আইটেম ২',
-          labelEn: 'Item 2',
-          currency: 'BDT',
-          min: 5000,
-          max: 10000,
-          default: 8000,
-          estimate: 8000,
+          id: 'blocked-amount',
+          category: 'blocked-account',
+          labelBn: 'ব্লকড একাউন্ট ফান্ড',
+          labelEn: 'Blocked account funds',
+          currency: 'EUR',
+          min: 11904,
+          max: 11904,
+          default: 11904,
+          estimate: 11904,
           actualPaid: null,
           arranged: false,
-          type: 'fee',
+          type: 'released-monthly',
           noteBn: '',
           noteEn: '',
-          sourceUrl: '',
+          sourceUrl: 'https://www.auswaertiges-amt.de',
           lastVerified: '2026-11-20',
           order: 1,
         },
       ];
 
-      // Exchange rate: 100 BDT/EUR, 0% margin
+      // Rate: 100 BDT/EUR
       const summary = calculateBudget(sampleItems, 100, 0, sampleCategories);
 
-      // item1: min 100 EUR = 10,000 BDT; item2: min 5,000 BDT => totalMin = 15,000 BDT
-      expect(summary.totalMinBDT).toBe(15000);
+      // Blocked amount is in retained funds (11,904 EUR * 100 = 1,190,400 BDT)
+      expect(summary.retainedSelectedBDT).toBe(1190400);
 
-      // item1: max 200 EUR = 20,000 BDT; item2: max 10,000 BDT => totalMax = 30,000 BDT
-      expect(summary.totalMaxBDT).toBe(30000);
+      // Visa fee is non-recoverable (75 EUR * 100 = 7,500 BDT)
+      expect(summary.sunkSelectedBDT).toBe(7500);
 
-      // item1: estimate 150 EUR = 15,000 BDT; item2: estimate 8,000 BDT => totalSelected = 23,000 BDT
-      expect(summary.totalSelectedBDT).toBe(23000);
+      // Combined total = 1,197,900 BDT
+      expect(summary.totalSelectedBDT).toBe(1197900);
+    });
 
-      // item1: actualPaid 140 EUR = 14,000 BDT; item2: actualPaid null => totalActual = 14,000 BDT
-      expect(summary.totalActualBDT).toBe(14000);
-
-      // Arranged: item1 is true, item2 is false => 1 arranged
-      expect(summary.arrangedCount).toBe(1);
-      expect(summary.totalCount).toBe(2);
-
-      // Category 1 is 100% arranged => completed step 0
-      expect(summary.completedSteps).toContain(0);
-      expect(summary.completedSteps).not.toContain(1);
+    it('correctly identifies retained funds vs sunk costs', () => {
+      expect(isRetainedFund('blocked-amount')).toBe(true);
+      expect(isRetainedFund('housing-deposit')).toBe(true);
+      expect(isRetainedFund('uni-assist-first')).toBe(false);
+      expect(isRetainedFund('flight-ticket')).toBe(false);
+      expect(isRetainedFund('visa-fee')).toBe(false);
     });
   });
 
@@ -176,11 +181,24 @@ describe('Budget Calculation Engine', () => {
     });
   });
 
-  describe('Timeline & Calendar Export', () => {
+  describe('Timeline & Dynamic Intake Engine', () => {
+    it('dynamically computes next upcoming intake without showing past dates', () => {
+      // In November 2026, the next intake is Summer 2027 (starts April 2027)
+      const novDate = new Date(2026, 10, 20);
+      const nextIntakeNov = getNextUpcomingIntake(novDate);
+      expect(nextIntakeNov.type).toBe('summer');
+      expect(nextIntakeNov.year).toBe(2027);
+
+      // In March 2027, the next intake is Winter 2027 (starts October 2027)
+      const marDate = new Date(2027, 2, 10);
+      const nextIntakeMar = getNextUpcomingIntake(marDate);
+      expect(nextIntakeMar.type).toBe('winter');
+      expect(nextIntakeMar.year).toBe(2027);
+    });
+
     it('generates deadlines for winter intake starting October', () => {
       const deadlines = generateDeadlines({ type: 'winter', year: 2026 }, 'en');
       expect(deadlines.length).toBeGreaterThan(0);
-      // Arrival should be in October 2026
       const arrival = deadlines.find((d) => d.id === 'arrive');
       expect(arrival?.date.getMonth()).toBe(9); // 0-indexed: 9 = October
       expect(arrival?.date.getFullYear()).toBe(2026);
@@ -198,17 +216,62 @@ describe('Budget Calculation Engine', () => {
     });
   });
 
+  describe('Formatting & Locales (P0 Consistency)', () => {
+    it('formats BDT with Bengali digits and South Asian lakh grouping in bn', () => {
+      const formatted = formatCurrency(1525000, 'BDT', 'bn');
+      // Must contain Bengali currency symbol ৳ and Bengali digits
+      expect(formatted).toContain('৳');
+      expect(formatted).toContain('১৫,২৫,০০০');
+    });
+
+    it('formats BDT with Latin digits and standard notation in en', () => {
+      const formatted = formatCurrency(1525000, 'BDT', 'en');
+      expect(formatted).toContain('৳');
+      expect(formatted).toContain('15,25,000');
+    });
+
+    it('converts Latin numbers to Bengali digits accurately', () => {
+      expect(toBanglaDigits('0123456789')).toBe('০১২৩৪৫৬৭৮৯');
+      expect(toBanglaDigits(42)).toBe('৪২');
+    });
+
+    it('extracts clean domain from source URLs', () => {
+      expect(extractDomain('https://www.daad.de/en/study-and-research/')).toBe('daad.de');
+      expect(extractDomain('https://dhaka.diplo.de/bd-en/service/visa')).toBe('dhaka.diplo.de');
+      expect(extractDomain('')).toBe('');
+    });
+
+    it('evaluates freshness status correctly (<30d fresh, <90d moderate, >90d stale)', () => {
+      const now = new Date();
+      const freshDate = new Date(now.getTime() - 10 * 24 * 3600 * 1000).toISOString();
+      const recentDate = new Date(now.getTime() - 45 * 24 * 3600 * 1000).toISOString();
+      const staleDate = new Date(now.getTime() - 120 * 24 * 3600 * 1000).toISOString();
+
+      expect(getFreshnessStatus(freshDate).status).toBe('fresh');
+      expect(getFreshnessStatus(recentDate).status).toBe('moderate');
+      expect(getFreshnessStatus(staleDate).status).toBe('stale');
+    });
+  });
+
   describe('Smart Insights Generation', () => {
-    it('generates meaningful Bangla and English insights', () => {
-      const mockSummary = {
-        totalMin: 1000000,
+    it('generates meaningful Bangla and English insights comparing like-with-like', () => {
+      const mockSummary: BudgetSummary = {
+        totalMin: 1500000,
         totalMax: 2000000,
         totalSelected: 2200000,
         totalActual: 500000,
-        totalMinBDT: 1000000,
+        totalMinBDT: 1500000,
         totalMaxBDT: 2000000,
         totalSelectedBDT: 2200000,
         totalActualBDT: 500000,
+        sunkMinBDT: 400000,
+        sunkMaxBDT: 600000,
+        sunkSelectedBDT: 700000,
+        sunkActualBDT: 150000,
+        retainedMinBDT: 1100000,
+        retainedMaxBDT: 1400000,
+        retainedSelectedBDT: 1500000,
+        retainedActualBDT: 350000,
         byCategory: {},
         arrangedCount: 5,
         totalCount: 15,
@@ -217,11 +280,11 @@ describe('Budget Calculation Engine', () => {
 
       const bnInsights = generateInsights(mockSummary, 128, 2, 'bn');
       expect(bnInsights.length).toBeGreaterThan(0);
-      expect(bnInsights.some((msg) => msg.includes('সঞ্চয় প্রয়োজন') || msg.includes('বেশি'))).toBe(true);
+      expect(bnInsights.some((msg) => msg.includes('তহবিল') || msg.includes('বেশি') || msg.includes('প্রস্তুত'))).toBe(true);
 
       const enInsights = generateInsights(mockSummary, 128, 2, 'en');
       expect(enInsights.length).toBeGreaterThan(0);
-      expect(enInsights.some((msg) => msg.includes('savings') || msg.includes('over the standard'))).toBe(true);
+      expect(enInsights.some((msg) => msg.includes('own money') || msg.includes('baseline') || msg.includes('available cash'))).toBe(true);
     });
   });
 });

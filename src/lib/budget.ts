@@ -1,4 +1,13 @@
-import { UserCostItem, BudgetSummary, CostItem, CostsData } from '@/types';
+import { UserCostItem, BudgetSummary, CostItem, CostsData, TimelineIntake, TimelineDeadline, Language } from '@/types';
+import { formatCurrency, toBanglaDigits } from './utils';
+
+/**
+ * Checks whether an item is a retained asset (blocked account or refundable deposit)
+ * rather than a non-recoverable sunk fee.
+ */
+export function isRetainedFund(item: CostItem | UserCostItem): boolean {
+  return item.type === 'released-monthly' || item.type === 'refundable';
+}
 
 /**
  * Convert an amount to BDT using exchange rate and bank margin
@@ -34,7 +43,10 @@ export function getEffectiveRate(rate: number, bankMarginPercent: number): numbe
 }
 
 /**
- * Calculate full budget summary from user items
+ * Calculates budget with two distinct buckets:
+ * 1. Non-recoverable costs (sunk fees, flights, tests, initial expenses)
+ * 2. Funds you still own (blocked account released monthly, refundable Kaution)
+ * 3. Combined total funds
  */
 export function calculateBudget(
   items: UserCostItem[],
@@ -43,13 +55,19 @@ export function calculateBudget(
   categories: { id: string; step: number }[]
 ): BudgetSummary {
   const byCategory: BudgetSummary['byCategory'] = {};
-  
-  let totalMin = 0;
-  let totalMax = 0;
-  let totalSelected = 0;
-  let totalActual = 0;
+
+  let sunkMinBDT = 0;
+  let sunkMaxBDT = 0;
+  let sunkSelectedBDT = 0;
+  let sunkActualBDT = 0;
+
+  let retainedMinBDT = 0;
+  let retainedMaxBDT = 0;
+  let retainedSelectedBDT = 0;
+  let retainedActualBDT = 0;
+
   let arrangedCount = 0;
-  
+
   // Initialize categories
   for (const cat of categories) {
     byCategory[cat.id] = {
@@ -57,22 +75,31 @@ export function calculateBudget(
       minBDT: 0, maxBDT: 0, selectedBDT: 0, actualBDT: 0,
     };
   }
-  
+
   for (const item of items) {
     const minBDT = convertToBDT(item.min, item.currency, rate, bankMarginPercent);
     const maxBDT = convertToBDT(item.max, item.currency, rate, bankMarginPercent);
     const selectedBDT = convertToBDT(item.estimate, item.currency, rate, bankMarginPercent);
-    const actualBDT = item.actualPaid !== null 
-      ? convertToBDT(item.actualPaid, item.currency, rate, bankMarginPercent) 
+    const actualBDT = item.actualPaid !== null
+      ? convertToBDT(item.actualPaid, item.currency, rate, bankMarginPercent)
       : 0;
-    
-    totalMin += minBDT;
-    totalMax += maxBDT;
-    totalSelected += selectedBDT;
-    totalActual += actualBDT;
-    
+
+    const isRetained = isRetainedFund(item);
+
+    if (isRetained) {
+      retainedMinBDT += minBDT;
+      retainedMaxBDT += maxBDT;
+      retainedSelectedBDT += selectedBDT;
+      retainedActualBDT += actualBDT;
+    } else {
+      sunkMinBDT += minBDT;
+      sunkMaxBDT += maxBDT;
+      sunkSelectedBDT += selectedBDT;
+      sunkActualBDT += actualBDT;
+    }
+
     if (item.arranged) arrangedCount++;
-    
+
     if (byCategory[item.category]) {
       byCategory[item.category].min += item.min;
       byCategory[item.category].max += item.max;
@@ -84,7 +111,7 @@ export function calculateBudget(
       byCategory[item.category].actualBDT += actualBDT;
     }
   }
-  
+
   // Determine completed steps
   const completedSteps: number[] = [];
   for (const cat of categories) {
@@ -93,16 +120,33 @@ export function calculateBudget(
       completedSteps.push(cat.step);
     }
   }
-  
+
+  const totalMinBDT = sunkMinBDT + retainedMinBDT;
+  const totalMaxBDT = sunkMaxBDT + retainedMaxBDT;
+  const totalSelectedBDT = sunkSelectedBDT + retainedSelectedBDT;
+  const totalActualBDT = sunkActualBDT + retainedActualBDT;
+
   return {
-    totalMin,
-    totalMax,
-    totalSelected,
-    totalActual,
-    totalMinBDT: totalMin,
-    totalMaxBDT: totalMax,
-    totalSelectedBDT: totalSelected,
-    totalActualBDT: totalActual,
+    sunkMinBDT,
+    sunkMaxBDT,
+    sunkSelectedBDT,
+    sunkActualBDT,
+
+    retainedMinBDT,
+    retainedMaxBDT,
+    retainedSelectedBDT,
+    retainedActualBDT,
+
+    totalMinBDT,
+    totalMaxBDT,
+    totalSelectedBDT,
+    totalActualBDT,
+
+    totalMin: totalMinBDT,
+    totalMax: totalMaxBDT,
+    totalSelected: totalSelectedBDT,
+    totalActual: totalActualBDT,
+
     byCategory,
     arrangedCount,
     totalCount: items.length,
@@ -132,17 +176,21 @@ export function applyScenario(
   cityAdjustment?: { rentMultiplier: number; livingMultiplier: number }
 ): UserCostItem[] {
   return items.map(item => {
+    // Blocked account amount (€11,904) is statutory and never multiplied by scenario
+    if (item.id === 'blocked-account') {
+      return item;
+    }
+
     let estimate = item.default * multiplier;
-    
+
     if (cityAdjustment) {
-      // Apply city-specific adjustments for housing and living costs
       if (item.id === 'housing-deposit' || item.id === 'first-month-rent') {
         estimate *= cityAdjustment.rentMultiplier;
       } else if (item.id === 'pocket-money' || item.id === 'initial-shopping') {
         estimate *= cityAdjustment.livingMultiplier;
       }
     }
-    
+
     return {
       ...item,
       estimate: Math.round(estimate),
@@ -151,178 +199,161 @@ export function applyScenario(
 }
 
 /**
- * Generate smart insights based on budget data
+ * Dynamically computes the next upcoming intake based on current date
  */
-export function generateInsights(
-  summary: BudgetSummary,
-  rate: number,
-  bankMargin: number,
-  language: 'bn' | 'en'
-): string[] {
-  const insights: string[] = [];
-  const standardBudget = summary.totalMax * 0.75; // Approximate standard
-  
-  if (language === 'bn') {
-    // Over budget warning
-    if (summary.totalSelected > standardBudget * 1.1) {
-      const pct = Math.round(((summary.totalSelected - standardBudget) / standardBudget) * 100);
-      insights.push(`আপনার নির্বাচিত বাজেট মানসম্মত বাজেটের চেয়ে ${pct}% বেশি।`);
-    }
-    
-    // Savings needed
-    const remaining = summary.totalSelected - summary.totalActual;
-    if (remaining > 0) {
-      insights.push(`আপনার নির্বাচিত বাজেটের জন্য আরও প্রায় ৳${Math.round(remaining).toLocaleString('en-IN')} সঞ্চয় প্রয়োজন।`);
-    }
-    
-    // Progress
-    if (summary.arrangedCount > 0) {
-      const pct = Math.round((summary.arrangedCount / summary.totalCount) * 100);
-      insights.push(`আপনি ${summary.totalCount}টি আইটেমের মধ্যে ${summary.arrangedCount}টি (${pct}%) সম্পন্ন করেছেন।`);
-    }
-    
-    // Blocked account info
-    insights.push(`ব্লকড একাউন্টের টাকা (€১১,৯০৪) প্রতি মাসে €৯৯২ করে রিলিজ হবে।`);
-    
+export function getNextUpcomingIntake(referenceDate: Date = new Date()): TimelineIntake {
+  const year = referenceDate.getFullYear();
+  const month = referenceDate.getMonth(); // 0 = Jan, 6 = July
+
+  // Summer intake starts in April (approx app deadline mid-January)
+  // Winter intake starts in October (approx app deadline mid-July)
+  if (month < 1 || (month === 1 && referenceDate.getDate() <= 15)) {
+    // Before mid-Jan: Summer intake of current year is still upcoming
+    return { type: 'summer', year };
+  } else if (month <= 6 || (month === 6 && referenceDate.getDate() <= 15)) {
+    // Between mid-Jan and mid-July: Winter intake of current year
+    return { type: 'winter', year };
   } else {
-    if (summary.totalSelected > standardBudget * 1.1) {
-      const pct = Math.round(((summary.totalSelected - standardBudget) / standardBudget) * 100);
-      insights.push(`Your selected budget is ${pct}% over the standard budget.`);
-    }
-    
-    const remaining = summary.totalSelected - summary.totalActual;
-    if (remaining > 0) {
-      insights.push(`You need approximately ৳${Math.round(remaining).toLocaleString('en-IN')} more in savings for your selected budget.`);
-    }
-    
-    if (summary.arrangedCount > 0) {
-      const pct = Math.round((summary.arrangedCount / summary.totalCount) * 100);
-      insights.push(`You've completed ${summary.arrangedCount} of ${summary.totalCount} items (${pct}%).`);
-    }
-    
-    insights.push(`Blocked account funds (€11,904) will be released at €992/month.`);
+    // After mid-July: Summer intake of next year
+    return { type: 'summer', year: year + 1 };
   }
-  
-  return insights;
 }
 
 /**
- * Generate timeline deadlines based on intake
+ * Generate timeline milestones relative to chosen intake
  */
 export function generateDeadlines(
-  intake: { type: 'winter' | 'summer'; year: number },
-  language: 'bn' | 'en'
-): { id: string; step: number; labelBn: string; labelEn: string; date: Date }[] {
-  // Winter semester starts October, Summer starts April
-  const startMonth = intake.type === 'winter' ? 9 : 3; // 0-indexed
-  const startDate = new Date(intake.year, startMonth, 1);
-  
-  const deadlines = [
+  intake: TimelineIntake,
+  language: Language,
+  referenceDate: Date = new Date()
+): TimelineDeadline[] {
+  // Winter semester begins Oct 1; Summer semester begins Apr 1
+  const startMonth = intake.type === 'winter' ? 9 : 3;
+  const intakeStartDate = new Date(intake.year, startMonth, 1);
+
+  const rawMilestones = [
     {
       id: 'ielts-prep',
       step: 0,
-      labelBn: 'IELTS পরীক্ষা দিন',
-      labelEn: 'Take IELTS exam',
+      labelBn: 'IELTS / ভাষা পরীক্ষার প্রস্তুতি ও স্কোর নিশ্চিতকরণ',
+      labelEn: 'Take IELTS / language exam and secure target score',
       monthsBefore: 12,
     },
     {
       id: 'documents',
       step: 0,
-      labelBn: 'ডকুমেন্ট সংগ্রহ শুরু করুন',
-      labelEn: 'Start collecting documents',
-      monthsBefore: 11,
+      labelBn: 'একাডেমিক ট্রান্সক্রিপ্ট ও ডকুমেন্ট সত্যায়ন সম্পন্ন',
+      labelEn: 'Complete academic documents collection & attestation',
+      monthsBefore: 10,
     },
     {
       id: 'uni-research',
       step: 1,
-      labelBn: 'বিশ্ববিদ্যালয় গবেষণা ও শর্টলিস্ট',
-      labelEn: 'Research & shortlist universities',
-      monthsBefore: 10,
+      labelBn: 'বিশ্ববিদ্যালয় শর্টলিস্ট ও প্রফেসরের প্রয়োজনীয়তা যাচাই',
+      labelEn: 'Shortlist universities & verify admission requirements',
+      monthsBefore: 9,
     },
     {
       id: 'uni-apply',
       step: 1,
-      labelBn: 'বিশ্ববিদ্যালয়ে আবেদন করুন',
-      labelEn: 'Apply to universities',
-      monthsBefore: 8,
+      labelBn: 'Uni-Assist ও পোর্টালে বিশ্ববিদ্যালয় আবেদন দাখিল',
+      labelEn: 'Submit university applications via Uni-Assist / portal',
+      monthsBefore: 7,
     },
     {
       id: 'admission-letter',
       step: 1,
-      labelBn: 'ভর্তি পত্র পান',
-      labelEn: 'Receive admission letter',
-      monthsBefore: 5,
+      labelBn: 'ভর্তি পত্র (Zulassungsbescheid) সংগ্রহ',
+      labelEn: 'Receive university admission letter (Zulassungsbescheid)',
+      monthsBefore: 4,
     },
     {
       id: 'blocked-account-open',
       step: 2,
-      labelBn: 'ব্লকড একাউন্ট খুলুন',
-      labelEn: 'Open blocked account',
-      monthsBefore: 4,
+      labelBn: 'ব্লকড একাউন্ট খোলা (Expatrio / Coracle)',
+      labelEn: 'Open blocked account with provider (Expatrio / Coracle)',
+      monthsBefore: 3.5,
     },
     {
       id: 'blocked-account-fund',
       step: 2,
-      labelBn: 'ব্লকড একাউন্টে টাকা জমা দিন',
-      labelEn: 'Fund blocked account',
+      labelBn: 'ব্যাংক স্টুডেন্ট ফাইলের মাধ্যমে ব্লকড ফান্ড (€১১,৯০৪) ট্রান্সফার',
+      labelEn: 'Transfer blocked funds (€11,904) via bank student file',
       monthsBefore: 3,
     },
     {
       id: 'visa-apply',
       step: 3,
-      labelBn: 'ভিসার জন্য আবেদন করুন',
-      labelEn: 'Apply for visa',
-      monthsBefore: 3,
+      labelBn: 'জার্মান দূতাবাসে স্টুডেন্ট ভিসা ইন্টারভিউ ও আবেদন জমা',
+      labelEn: 'Submit visa application at German Embassy Dhaka',
+      monthsBefore: 2.5,
     },
     {
       id: 'visa-receive',
       step: 3,
-      labelBn: 'ভিসা পান',
-      labelEn: 'Receive visa',
-      monthsBefore: 1.5,
+      labelBn: 'ভিসা পাসপোর্ট সংগ্রহ ও স্বাস্থ্য বীমা নিশ্চিতকরণ',
+      labelEn: 'Collect visa passport with travel health insurance',
+      monthsBefore: 1,
     },
     {
       id: 'book-housing',
       step: 4,
-      labelBn: 'আবাসন বুক করুন',
-      labelEn: 'Book housing',
-      monthsBefore: 2,
+      labelBn: 'জার্মানিতে আবাসন / ডর্ম বুকিং ও চুক্তি নিশ্চিতকরণ',
+      labelEn: 'Secure student dormitory / WG shared accommodation',
+      monthsBefore: 1.5,
     },
     {
       id: 'book-flight',
       step: 4,
-      labelBn: 'বিমান টিকেট বুক করুন',
-      labelEn: 'Book flight ticket',
-      monthsBefore: 1,
+      labelBn: 'বিমান টিকেট সংগ্রহ ও প্যাকিং',
+      labelEn: 'Book one-way flight ticket and packing',
+      monthsBefore: 0.75,
     },
     {
       id: 'arrive',
       step: 5,
-      labelBn: 'জার্মানিতে পৌঁছান',
-      labelEn: 'Arrive in Germany',
+      labelBn: 'জার্মানিতে আগমন, সিটি রেজিস্ট্রেশন (Anmeldung) ও ব্যাংক এক্টিভেশন',
+      labelEn: 'Arrive in Germany, city registration (Anmeldung) & bank activation',
       monthsBefore: 0,
     },
   ];
-  
-  return deadlines.map(d => {
-    const date = new Date(startDate);
-    date.setMonth(date.getMonth() - d.monthsBefore);
+
+  const nowTime = referenceDate.getTime();
+  const isPastIntake = intakeStartDate.getTime() < nowTime;
+
+  return rawMilestones.map((m) => {
+    const d = new Date(intakeStartDate);
+    // Subtract monthsBefore
+    const targetMonth = d.getMonth() - Math.floor(m.monthsBefore);
+    const targetDateDays = d.getDate() - Math.round((m.monthsBefore % 1) * 30);
+    d.setMonth(targetMonth);
+    d.setDate(targetDateDays);
+
+    let status: 'upcoming' | 'overdue' | 'completed' = 'upcoming';
+
+    if (isPastIntake && d.getTime() < nowTime) {
+      status = 'overdue';
+    }
+
     return {
-      id: d.id,
-      step: d.step,
-      labelBn: d.labelBn,
-      labelEn: d.labelEn,
-      date,
+      id: m.id,
+      step: m.step,
+      labelBn: m.labelBn,
+      labelEn: m.labelEn,
+      date: d,
+      completed: false,
+      status,
+      relativeMonths: m.monthsBefore,
     };
   });
 }
 
 /**
- * Generate ICS calendar content
+ * Generate ICS calendar content adhering to RFC 5545
  */
 export function generateICS(
   deadlines: { labelEn: string; labelBn: string; date: Date }[],
-  language: 'bn' | 'en'
+  language: Language
 ): string {
   const lines = [
     'BEGIN:VCALENDAR',
@@ -331,21 +362,102 @@ export function generateICS(
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
   ];
-  
+
   for (const d of deadlines) {
     const dateStr = d.date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    const label = language === 'bn' ? d.labelBn : d.labelEn;
+    const summary = language === 'bn' ? d.labelBn : d.labelEn;
     lines.push(
       'BEGIN:VEVENT',
       `DTSTART;VALUE=DATE:${dateStr.slice(0, 8)}`,
       `DTEND;VALUE=DATE:${dateStr.slice(0, 8)}`,
-      `SUMMARY:${label}`,
-      `DESCRIPTION:GermanyCostBD - Study Abroad Planner`,
-      `UID:${d.date.getTime()}@germanycostbd`,
+      `SUMMARY:${summary}`,
+      `DESCRIPTION:GermanyCostBD - Study in Germany milestone reminder`,
+      `UID:${d.date.getTime()}-${Math.random().toString(36).slice(2, 7)}@germanycostbd.com`,
       'END:VEVENT'
     );
   }
-  
+
   lines.push('END:VCALENDAR');
   return lines.join('\r\n');
+}
+
+/**
+ * Generate smart financial insights comparing like-with-like
+ */
+export function generateInsights(
+  summary: BudgetSummary,
+  rate: number,
+  bankMargin: number,
+  language: Language
+): string[] {
+  const insights: string[] = [];
+
+  // Compare non-recoverable with standard non-recoverable baseline (~৳4,50,000 to ৳5,50,000)
+  const standardSunkBaseline = (summary.sunkMinBDT + summary.sunkMaxBDT) / 2;
+
+  if (language === 'bn') {
+    // 1. Clarification between sunk cost vs retained funds
+    insights.push(
+      `আপনার মোট বাজেটের প্রায় ${toBanglaDigits(Math.round((summary.retainedSelectedBDT / summary.totalSelectedBDT) * 100))}% অর্থ (ব্লকড একাউন্ট ও জামানত) সম্পূর্ণ আপনার নিজের তহবিল, যা প্রতি মাসে জার্মানিতে খরচ হিসেবে রিলিজ হবে।`
+    );
+
+    // 2. Budget status
+    if (summary.sunkSelectedBDT > standardSunkBaseline * 1.15) {
+      const pct = Math.round(((summary.sunkSelectedBDT - standardSunkBaseline) / standardSunkBaseline) * 100);
+      insights.push(
+        `আপনার পছন্দের অফেরতযোগ্য খরচ মানসম্মত ব্যয়ের চেয়ে ${toBanglaDigits(pct)}% বেশি। ডর্ম বা আগাম টিকেটের মাধ্যমে এটি সাশ্রয় করা সম্ভব।`
+      );
+    } else {
+      insights.push(
+        `আপনার অফেরতযোগ্য খরচের পরিকল্পনা বাস্তবসম্মত ও সুষম সীমার মধ্যে রয়েছে।`
+      );
+    }
+
+    // 3. Progress tracking
+    if (summary.arrangedCount > 0) {
+      const pct = Math.round((summary.arrangedCount / summary.totalCount) * 100);
+      insights.push(
+        `আপনি ইতিমধ্যে ${toBanglaDigits(summary.totalCount)}টি আইটেমের মধ্যে ${toBanglaDigits(summary.arrangedCount)}টি (${toBanglaDigits(pct)}%) ব্যবস্থা সম্পন্ন করেছেন।`
+      );
+    }
+
+    // 4. Savings still needed for non-recoverable
+    const sunkRemaining = Math.max(0, summary.sunkSelectedBDT - summary.sunkActualBDT);
+    if (sunkRemaining > 0) {
+      insights.push(
+        `প্রাথমিক খরচ পরিশোধের জন্য আরও প্রায় ${formatCurrency(sunkRemaining, 'BDT', 'bn')} প্রস্তুত রাখতে হবে।`
+      );
+    }
+  } else {
+    insights.push(
+      `About ${Math.round((summary.retainedSelectedBDT / summary.totalSelectedBDT) * 100)}% of your total budget (blocked account & deposit) remains your own money, released monthly (€992/mo) in Germany.`
+    );
+
+    if (summary.sunkSelectedBDT > standardSunkBaseline * 1.15) {
+      const pct = Math.round(((summary.sunkSelectedBDT - standardSunkBaseline) / standardSunkBaseline) * 100);
+      insights.push(
+        `Your non-recoverable estimate is ${pct}% above the standard baseline. Early flight and dorm booking can help reduce this.`
+      );
+    } else {
+      insights.push(
+        `Your non-recoverable budget plan is balanced and aligned with average student expenses.`
+      );
+    }
+
+    if (summary.arrangedCount > 0) {
+      const pct = Math.round((summary.arrangedCount / summary.totalCount) * 100);
+      insights.push(
+        `You have confirmed plans for ${summary.arrangedCount} of ${summary.totalCount} items (${pct}%).`
+      );
+    }
+
+    const sunkRemaining = Math.max(0, summary.sunkSelectedBDT - summary.sunkActualBDT);
+    if (sunkRemaining > 0) {
+      insights.push(
+        `You need approximately ${formatCurrency(sunkRemaining, 'BDT', 'en')} more in available cash to cover immediate upfront costs.`
+      );
+    }
+  }
+
+  return insights;
 }
