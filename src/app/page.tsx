@@ -95,6 +95,11 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground antialiased selection:bg-primary/20">
+      {/* Automated fee refresh notice if any (Top Level banner) */}
+      <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 pt-3 print:hidden">
+        <FeeChangeBanner />
+      </div>
+
       <Header activeTab={activeTab} onTabChange={handleTabChange} />
 
       {/* Shared Read-Only Notification Banner */}
@@ -243,11 +248,8 @@ export default function HomePage() {
           SCREEN MAIN INTERFACE
          ========================================================================= */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-5 space-y-6 print:hidden">
-        {/* Automated fee refresh notice if any */}
-        <FeeChangeBanner />
-
-        {/* In-page Tab Bar */}
-        <div className="flex items-center justify-start sm:justify-center overflow-x-auto no-scrollbar gap-1.5 p-1 bg-muted/60 border border-border/60 rounded-xl">
+        {/* Mobile-Only Tab Bar (Desktop uses Header navigation) */}
+        <div className="md:hidden flex items-center justify-start overflow-x-auto no-scrollbar gap-1.5 p-1 bg-muted/60 border border-border/60 rounded-xl">
           {navTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -268,7 +270,7 @@ export default function HomePage() {
           })}
         </div>
 
-        {/* Tab 1: OVERVIEW (Hero, 2-group budget charts, smart insights) */}
+        {/* Tab 1: OVERVIEW (Hero, 2-group budget charts, smart insights, export) */}
         {activeTab === 'overview' && (
           <div className="space-y-6 animate-in fade-in-50 duration-200">
             <HeroSection />
@@ -279,7 +281,6 @@ export default function HomePage() {
                 <SmartInsights />
               </div>
               <aside className="lg:col-span-4 space-y-6">
-                <StickySummarySidebar />
                 <ExportShare />
               </aside>
             </div>

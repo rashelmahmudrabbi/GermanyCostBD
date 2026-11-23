@@ -6,7 +6,7 @@ import { UserCostItem, ExchangeRate, Scenario, TimelineIntake, TimelineDeadline,
 import costsData from '@/data/costs.json';
 import { initializeItems, generateDeadlines, getNextUpcomingIntake } from '@/lib/budget';
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 function getDefaultItems(): UserCostItem[] {
   return initializeItems(costsData as any);
@@ -28,56 +28,63 @@ function getDefaultIntake(): TimelineIntake {
 
 // Safe schema migration logic
 function migrateState(persistedState: any, version: number): any {
-  if (version < 2) {
-    // Migration to version 2:
-    // 1. Relocate semester-contribution to university category
-    // 2. Refresh insurance labels
-    // 3. Ensure intake is computed dynamically if missing
-    let updatedItems = (persistedState.items || []).map((item: UserCostItem) => {
-      if (item.id === 'semester-contribution') {
-        return { ...item, category: 'university' };
-      }
-      if (item.id === 'health-insurance-travel') {
-        return {
-          ...item,
-          labelBn: 'ট্র্যাভেল হেলথ ইন্সুরেন্স (ভিসা)',
-          labelEn: 'Travel health insurance (visa)',
-          category: 'visa',
-        };
-      }
-      if (item.id === 'health-insurance-monthly') {
-        return {
-          ...item,
-          labelBn: 'সরকারি স্বাস্থ্য বীমা (১ম মাস)',
-          labelEn: 'Statutory health insurance (first month)',
-          category: 'arrival',
-        };
-      }
-      if (item.id === 'blocked-account') {
-        return {
-          ...item,
-          noteBn: 'জার্মান ভিসার বাধ্যতামূলক তহবিল। €৯৯২ × ১২ মাস = €১১,৯০৪। প্রতি মাসে €৯৯২ করে নিজের জার্মান ব্যাংক একাউন্টে রিলিজ হবে।',
-          noteEn: 'Mandatory visa living fund. €992 × 12 months = €11,904. Released monthly (€992/month) to your German checking account.',
-        };
-      }
-      return item;
-    });
-
-    if (!updatedItems || updatedItems.length === 0) {
-      updatedItems = getDefaultItems();
+  let updatedItems = (persistedState.items || []).map((item: UserCostItem) => {
+    if (item.id === 'semester-contribution') {
+      return { ...item, category: 'university' };
     }
+    if (item.id === 'health-insurance-travel') {
+      return {
+        ...item,
+        labelBn: 'ট্র্যাভেল হেলথ ইন্সুরেন্স (ভিসা)',
+        labelEn: 'Travel health insurance (visa)',
+        category: 'visa',
+      };
+    }
+    if (item.id === 'health-insurance-monthly') {
+      return {
+        ...item,
+        labelBn: 'সরকারি স্বাস্থ্য বীমা (১ম মাস)',
+        labelEn: 'Statutory health insurance (first month)',
+        category: 'arrival',
+      };
+    }
+    if (item.id === 'blocked-account') {
+      return {
+        ...item,
+        noteBn: 'জার্মান ভিসার বাধ্যতামূলক তহবিল। €৯৯২ × ১২ মাস = €১১,৯০৪। প্রতি মাসে €৯৯২ করে নিজের জার্মান ব্যাংক একাউন্টে রিলিজ হবে।',
+        noteEn: 'Mandatory visa living fund. €992 × 12 months = €11,904. Released monthly (€992/month) to your German checking account.',
+      };
+    }
+    if (item.id === 'ielts') {
+      const isOutdated = item.estimate === 25500 || item.estimate === 26000 || item.default === 25500;
+      return {
+        ...item,
+        min: 31100,
+        max: 31100,
+        default: 31100,
+        estimate: isOutdated ? 31100 : item.estimate,
+        noteBn: 'ব্রিটিশ কাউন্সিল ও আইডিপি বাংলাদেশ IELTS একাডেমিক টেস্টের অফিসিয়াল ফি (৩১,১০০ টাকা)।',
+        noteEn: 'Official British Council & IDP Bangladesh IELTS Academic test fee (BDT 31,100).',
+        sourceUrl: 'https://www.britishcouncil.org.bd/en/exam/ielts/dates-fees-locations',
+        lastVerified: '2026-11-23',
+      };
+    }
+    return item;
+  });
 
-    const defaultIntake = getDefaultIntake();
-
-    return {
-      ...persistedState,
-      schemaVersion: SCHEMA_VERSION,
-      items: updatedItems,
-      intake: persistedState.intake || defaultIntake,
-      deadlines: generateDeadlines(persistedState.intake || defaultIntake, persistedState.language || 'bn'),
-    };
+  if (!updatedItems || updatedItems.length === 0) {
+    updatedItems = getDefaultItems();
   }
-  return persistedState;
+
+  const defaultIntake = getDefaultIntake();
+
+  return {
+    ...persistedState,
+    schemaVersion: SCHEMA_VERSION,
+    items: updatedItems,
+    intake: persistedState.intake || defaultIntake,
+    deadlines: generateDeadlines(persistedState.intake || defaultIntake, persistedState.language || 'bn'),
+  };
 }
 
 export const useStore = create<StoreState>()(

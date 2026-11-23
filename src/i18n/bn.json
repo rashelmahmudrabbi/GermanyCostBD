@@ -130,5 +130,12 @@
   "printStatusPending": "বাকি",
   "sunkBadge": "অফেরতযোগ্য ব্যয়",
   "retainedBadge": "আপনার নিজের তহবিল",
-  "effectiveRateNotice": "ব্যাংক মার্জিন সহ কার্যকর রেট"
+  "effectiveRateNotice": "ব্যাংক মার্জিন সহ কার্যকর রেট",
+  "budgetSummary": "বাজেট সারসংক্ষেপ",
+  "sunkFundsLabel": "মূল খরচ (অফেরতযোগ্য)",
+  "sunkFundsDesc": "ফি, টিকেট ও প্রাথমিক ব্যয়",
+  "retainedFundsLabel": "আপনার নিজের তহবিল",
+  "retainedFundsDesc": "ব্লকড একাউন্ট (€১১,৯০৪) ও ফেরতযোগ্য আবাসন জামানত",
+  "sunkSelectedBDT": "অফেরতযোগ্য বাজেট",
+  "retainedSelectedBDT": "সংরক্ষিত নিজস্ব তহবিল"
 }

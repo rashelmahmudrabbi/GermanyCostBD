@@ -52,14 +52,14 @@
       "labelBn": "IELTS পরীক্ষার ফি",
       "labelEn": "IELTS Exam Fee",
       "currency": "BDT",
-      "min": 25500,
-      "max": 25500,
-      "default": 25500,
+      "min": 31100,
+      "max": 31100,
+      "default": 31100,
       "type": "fee",
-      "noteBn": "ব্রিটিশ কাউন্সিল বাংলাদেশ IELTS একাডেমিক পরীক্ষার ফি।",
-      "noteEn": "British Council Bangladesh IELTS Academic test fee.",
+      "noteBn": "ব্রিটিশ কাউন্সিল ও আইডিপি বাংলাদেশ IELTS একাডেমিক টেস্টের অফিসিয়াল ফি (৩১,১০০ টাকা)।",
+      "noteEn": "Official British Council & IDP Bangladesh IELTS Academic test fee (BDT 31,100).",
       "sourceUrl": "https://www.britishcouncil.org.bd/en/exam/ielts/dates-fees-locations",
-      "lastVerified": "2026-10-20"
+      "lastVerified": "2026-11-23"
     },
     {
       "id": "ielts-prep",

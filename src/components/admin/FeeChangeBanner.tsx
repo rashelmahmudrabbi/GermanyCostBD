@@ -28,7 +28,7 @@ export function FeeChangeBanner() {
   const firstChange = pendingChanges[0];
 
   return (
-    <div className="bg-amber-500/15 border border-amber-500/30 rounded-xl p-3 md:p-4 mb-6 text-amber-900 dark:text-amber-200">
+    <div className="bg-amber-500/15 border border-amber-500/30 rounded-xl p-3 md:p-3.5 mb-3 text-amber-900 dark:text-amber-200">
       <div className="flex items-start sm:items-center justify-between gap-3">
         <div className="flex items-start sm:items-center gap-2.5">
           <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5 sm:mt-0" />

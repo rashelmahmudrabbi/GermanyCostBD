@@ -130,5 +130,12 @@
   "printStatusPending": "Pending",
   "sunkBadge": "Non-Recoverable Cost",
   "retainedBadge": "Funds You Still Own",
-  "effectiveRateNotice": "Effective exchange rate including bank margin"
+  "effectiveRateNotice": "Effective exchange rate including bank margin",
+  "budgetSummary": "Budget Summary",
+  "sunkFundsLabel": "Non-Recoverable Costs",
+  "sunkFundsDesc": "Fees, tickets & upfront costs",
+  "retainedFundsLabel": "Funds You Still Own",
+  "retainedFundsDesc": "Blocked account (€11,904) & refundable deposit",
+  "sunkSelectedBDT": "Non-Recoverable Budget",
+  "retainedSelectedBDT": "Retained Own Funds"
 }
