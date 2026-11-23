@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -58,6 +59,13 @@ export default function AdminPage() {
       }
 
       setActionSuccess(`Successfully ${action}ed change.`);
+      if (action === 'approve' && data.updatedItem) {
+        useStore.getState().updateItem(data.updatedItem.itemId, {
+          default: data.updatedItem.proposedValue,
+          estimate: data.updatedItem.proposedValue,
+          lastVerified: data.updatedItem.lastVerified,
+        });
+      }
       setPendingChanges((prev) => prev.filter((p) => p.id !== changeId));
     } catch (err: any) {
       setError(err.message || 'Action failed. Check password.');

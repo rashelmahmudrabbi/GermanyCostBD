@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
+import { getPendingFeesData, savePendingFeesData } from '@/lib/server-storage';
 
 export async function GET(request: Request) {
   // Check authorization for cron if CRON_SECRET is set
@@ -10,14 +9,13 @@ export async function GET(request: Request) {
   }
 
   const results: any[] = [];
-  const pendingFilePath = path.join(process.cwd(), 'src', 'data', 'pending-fees.json');
 
   try {
-    // 1. Simulated or real fetch from IELTS / Uni-Assist / Blocked account endpoints
-    // Uni-Assist official overview check
+    // 1. Check Uni-Assist official overview
     try {
       const uniAssistRes = await fetch('https://www.uni-assist.de/en/tools/fee-overview/', {
-        headers: { 'User-Agent': 'Mozilla/5.0' },
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+        cache: 'no-store',
       });
       if (uniAssistRes.ok) {
         results.push({ item: 'uni-assist-first', status: 'verified-unchanged', value: 75 });
@@ -26,13 +24,10 @@ export async function GET(request: Request) {
       results.push({ item: 'uni-assist-first', status: 'source-unreachable' });
     }
 
-    // Read current pending
-    let currentPending: any = { pending: [] };
-    if (fs.existsSync(pendingFilePath)) {
-      currentPending = JSON.parse(fs.readFileSync(pendingFilePath, 'utf8'));
-    }
+    // Read current pending data safely
+    const currentPending = getPendingFeesData();
 
-    // Check if new changes detected (mock/scan example)
+    // Mock scan or live fee detector for IELTS BD
     const newPendingChange = {
       id: `change-${Date.now()}`,
       itemId: 'ielts',
@@ -44,11 +39,10 @@ export async function GET(request: Request) {
       detectedAt: new Date().toISOString(),
     };
 
-    // Keep unique pending entries
     const exists = currentPending.pending.some((p: any) => p.itemId === newPendingChange.itemId);
     if (!exists) {
       currentPending.pending.push(newPendingChange);
-      fs.writeFileSync(pendingFilePath, JSON.stringify(currentPending, null, 2), 'utf8');
+      savePendingFeesData(currentPending);
     }
 
     return NextResponse.json({

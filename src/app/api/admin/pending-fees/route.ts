@@ -1,19 +1,12 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-
-const pendingFilePath = path.join(process.cwd(), 'src', 'data', 'pending-fees.json');
-const costsFilePath = path.join(process.cwd(), 'data', 'costs.json');
-
-function getPendingData() {
-  if (fs.existsSync(pendingFilePath)) {
-    return JSON.parse(fs.readFileSync(pendingFilePath, 'utf8'));
-  }
-  return { pending: [] };
-}
+import {
+  getPendingFeesData,
+  savePendingFeesData,
+  applyCostItemUpdate,
+} from '@/lib/server-storage';
 
 export async function GET() {
-  const data = getPendingData();
+  const data = getPendingFeesData();
   return NextResponse.json(data);
 }
 
@@ -27,34 +20,35 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Incorrect password' }, { status: 401 });
     }
 
-    const data = getPendingData();
+    const data = getPendingFeesData();
     const change = data.pending.find((p: any) => p.id === changeId);
 
     if (!change) {
       return NextResponse.json({ error: 'Change not found' }, { status: 404 });
     }
 
+    const verifiedDate = new Date().toISOString().split('T')[0];
+
     if (action === 'approve') {
-      // Update data/costs.json if it exists
-      if (fs.existsSync(costsFilePath)) {
-        const costs = JSON.parse(fs.readFileSync(costsFilePath, 'utf8'));
-        const item = costs.items.find((i: any) => i.id === change.itemId);
-        if (item) {
-          item.default = change.proposedValue;
-          item.min = Math.min(item.min, change.proposedValue);
-          item.max = Math.max(item.max, change.proposedValue);
-          item.lastVerified = new Date().toISOString().split('T')[0];
-          fs.writeFileSync(costsFilePath, JSON.stringify(costs, null, 2), 'utf8');
-        }
-      }
+      applyCostItemUpdate(change.itemId, change.proposedValue);
     }
 
     // Remove from pending
     data.pending = data.pending.filter((p: any) => p.id !== changeId);
-    fs.writeFileSync(pendingFilePath, JSON.stringify(data, null, 2), 'utf8');
+    savePendingFeesData(data);
 
-    return NextResponse.json({ success: true, action, changeId });
+    return NextResponse.json({
+      success: true,
+      action,
+      changeId,
+      updatedItem: action === 'approve' ? {
+        itemId: change.itemId,
+        proposedValue: change.proposedValue,
+        lastVerified: verifiedDate,
+      } : null,
+    });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Pending fee action error:', error);
+    return NextResponse.json({ error: error.message || 'Operation failed' }, { status: 500 });
   }
 }
