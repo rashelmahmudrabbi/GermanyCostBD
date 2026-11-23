@@ -280,7 +280,7 @@ export default function HomePage() {
                 <BudgetCharts />
                 <SmartInsights />
               </div>
-              <aside className="lg:col-span-4 space-y-6">
+              <aside className="lg:col-span-4 space-y-5 lg:sticky lg:top-20 self-start">
                 <ExportShare />
               </aside>
             </div>
@@ -296,7 +296,7 @@ export default function HomePage() {
               <div className="lg:col-span-8 space-y-6">
                 <CostList />
               </div>
-              <aside className="lg:col-span-4 space-y-6">
+              <aside className="lg:col-span-4 space-y-5 lg:sticky lg:top-20 self-start">
                 <StickySummarySidebar />
                 <ExportShare />
               </aside>
@@ -311,7 +311,7 @@ export default function HomePage() {
               <div className="lg:col-span-8 space-y-6">
                 <ScenarioCompare />
               </div>
-              <aside className="lg:col-span-4 space-y-6">
+              <aside className="lg:col-span-4 space-y-5 lg:sticky lg:top-20 self-start">
                 <StickySummarySidebar />
                 <ExportShare />
               </aside>
@@ -326,7 +326,7 @@ export default function HomePage() {
               <div className="lg:col-span-8 space-y-6">
                 <TimelineView />
               </div>
-              <aside className="lg:col-span-4 space-y-6">
+              <aside className="lg:col-span-4 space-y-5 lg:sticky lg:top-20 self-start">
                 <StickySummarySidebar />
                 <ExportShare />
               </aside>

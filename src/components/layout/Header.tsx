@@ -48,7 +48,7 @@ export function Header({ activeTab = 'overview', onTabChange }: HeaderProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b border-border bg-background shadow-xs transition-colors print:hidden">
+      <header className="sticky top-0 z-50 w-full border-b border-border bg-white dark:bg-[#09090b] shadow-xs transition-colors print:hidden">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-15 flex items-center justify-between gap-3">
           {/* Brand */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0 group">

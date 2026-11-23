@@ -29,7 +29,7 @@ export function StickySummarySidebar() {
 
   return (
     <>
-      <Card className="border-border/80 shadow-sm bg-card/95 backdrop-blur-sm sticky top-20">
+      <Card className="border-border/80 shadow-sm bg-white dark:bg-[#121217]">
         <CardContent className="p-4 space-y-4">
           {/* Header & Rate */}
           <div className="flex items-center justify-between pb-3 border-b border-border/60">

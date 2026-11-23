@@ -119,7 +119,7 @@ export function CostList() {
   return (
     <section className="space-y-4" id="cost-list">
       {/* Search Bar & Quick Filters */}
-      <div className="p-3.5 sm:p-4 rounded-2xl bg-card border border-border/70 shadow-xs space-y-3">
+      <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#121217] border border-border/70 shadow-xs space-y-3">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
           {/* Search Input */}
           <div className="relative flex-1">
