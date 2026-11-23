@@ -55,7 +55,7 @@ export function ExchangeRatePanel() {
   const effectiveRate = displayRate * (1 + exchangeRate.bankMargin / 100);
 
   return (
-    <Card>
+    <Card id="exchange-rate" className="scroll-mt-24 border-border/80 shadow-xs">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">{t('exchangeRate')}</CardTitle>

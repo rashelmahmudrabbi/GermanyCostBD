@@ -157,7 +157,7 @@ export default function HomePage() {
           </div>
 
           {/* Right Sidebar: Rate Panel, Charts, Export/Share */}
-          <aside className="lg:col-span-4 space-y-6 print:hidden">
+          <aside className="lg:col-span-4 space-y-6 print:hidden lg:sticky lg:top-20">
             <ExchangeRatePanel />
             <BudgetCharts />
             <ExportShare />

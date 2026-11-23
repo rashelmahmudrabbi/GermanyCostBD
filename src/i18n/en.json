@@ -94,5 +94,17 @@
   "feeChanged": "Fee Changed",
   "feeChangedDesc": "This fee has changed since last verified",
   "approve": "Approve",
-  "reject": "Reject"
+  "reject": "Reject",
+  "searchPlaceholder": "Search expenses (e.g. IELTS, Visa, Flight)...",
+  "filterAll": "All",
+  "filterPending": "Pending",
+  "filterArranged": "Arranged",
+  "filterEUR": "EUR (€)",
+  "filterBDT": "BDT (৳)",
+  "blockedAccountNotice": "Includes €11,904 Blocked Account — released at €992/month",
+  "quickPresets": "Quick Preset",
+  "navChecklist": "Checklist",
+  "navCharts": "Charts",
+  "navScenarios": "Scenarios",
+  "navTimeline": "Deadlines"
 }

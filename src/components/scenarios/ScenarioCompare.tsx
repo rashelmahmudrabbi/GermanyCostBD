@@ -60,7 +60,7 @@ export function ScenarioCompare() {
   const currentBudget = calculateBudget(items, effectiveRate, 0, categories as any[]);
 
   return (
-    <Card className="border-border/80 shadow-sm" id="scenario-compare">
+    <Card className="scroll-mt-24 border-border/80 shadow-sm" id="scenario-compare">
       <CardHeader className="pb-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>

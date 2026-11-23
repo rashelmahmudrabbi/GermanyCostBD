@@ -1,74 +1,86 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #09090b;
+@layer base {
+  :root {
+    --background: #ffffff;
+    --foreground: #09090b;
 
-  --card: #ffffff;
-  --card-foreground: #09090b;
+    --card: #ffffff;
+    --card-foreground: #09090b;
 
-  --popover: #ffffff;
-  --popover-foreground: #09090b;
+    --popover: #ffffff;
+    --popover-foreground: #09090b;
 
-  --primary: #0284c7;
-  --primary-foreground: #ffffff;
+    --primary: #0284c7;
+    --primary-foreground: #ffffff;
 
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
+    --secondary: #f1f5f9;
+    --secondary-foreground: #0f172a;
 
-  --muted: #f8fafc;
-  --muted-foreground: #64748b;
+    --muted: #f8fafc;
+    --muted-foreground: #64748b;
 
-  --accent: #f1f5f9;
-  --accent-foreground: #0f172a;
+    --accent: #f1f5f9;
+    --accent-foreground: #0f172a;
 
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
 
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #0284c7;
+    --border: #e2e8f0;
+    --input: #e2e8f0;
+    --ring: #0284c7;
 
-  --radius: 0.75rem;
+    --radius: 0.75rem;
 
-  --font-sans: var(--font-hind-siliguri), var(--font-inter), system-ui, sans-serif;
-  --font-mono: var(--font-mono), monospace;
+    --font-sans: var(--font-hind-siliguri), var(--font-inter), system-ui, -apple-system, sans-serif;
+    --font-mono: var(--font-mono), monospace;
+  }
+
+  .dark {
+    --background: #09090b;
+    --foreground: #f8fafc;
+
+    --card: #121217;
+    --card-foreground: #f8fafc;
+
+    --popover: #121217;
+    --popover-foreground: #f8fafc;
+
+    --primary: #38bdf8;
+    --primary-foreground: #09090b;
+
+    --secondary: #1e293b;
+    --secondary-foreground: #f8fafc;
+
+    --muted: #1a1a24;
+    --muted-foreground: #94a3b8;
+
+    --accent: #1e293b;
+    --accent-foreground: #f8fafc;
+
+    --destructive: #7f1d1d;
+    --destructive-foreground: #f8fafc;
+
+    --border: #27272a;
+    --input: #27272a;
+    --ring: #38bdf8;
+  }
 }
 
-.dark {
-  --background: #09090b;
-  --foreground: #f8fafc;
-
-  --card: #111116;
-  --card-foreground: #f8fafc;
-
-  --popover: #111116;
-  --popover-foreground: #f8fafc;
-
-  --primary: #38bdf8;
-  --primary-foreground: #09090b;
-
-  --secondary: #1e293b;
-  --secondary-foreground: #f8fafc;
-
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-
-  --accent: #1e293b;
-  --accent-foreground: #f8fafc;
-
-  --destructive: #7f1d1d;
-  --destructive-foreground: #f8fafc;
-
-  --border: #27272a;
-  --input: #27272a;
-  --ring: #38bdf8;
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   font-family: var(--font-sans);
   background-color: var(--background);
   color: var(--foreground);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Tabular numbers for all monetary values */
+.font-mono, [data-currency], .font-numeric {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Custom scrollbars */
@@ -82,6 +94,9 @@ body {
 ::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
 }
 
 /* Print Stylesheet for PDF Export */

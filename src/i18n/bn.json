@@ -94,5 +94,17 @@
   "feeChanged": "ফি পরিবর্তন হয়েছে",
   "feeChangedDesc": "সর্বশেষ যাচাইয়ের পর থেকে এই ফি পরিবর্তিত হয়েছে",
   "approve": "অনুমোদন",
-  "reject": "প্রত্যাখ্যান"
+  "reject": "প্রত্যাখ্যান",
+  "searchPlaceholder": "খরচের নাম দিয়ে খুঁজুন (যেমন: IELTS, ভিসা, টিকেট)...",
+  "filterAll": "সব",
+  "filterPending": "বাকি আছে",
+  "filterArranged": "ব্যবস্থা সম্পন্ন",
+  "filterEUR": "ইউরো (€)",
+  "filterBDT": "টাকা (৳)",
+  "blockedAccountNotice": "ব্লকড একাউন্ট (€১১,৯০৪) অন্তর্ভুক্ত — যা প্রতি মাসে €৯৯২ করে ফেরত পাবেন",
+  "quickPresets": "বাজেট ধরন",
+  "navChecklist": "চেকলিস্ট",
+  "navCharts": "চার্ট ও গ্রাফ",
+  "navScenarios": "পরিকল্পনা",
+  "navTimeline": "ডেডলাইন"
 }

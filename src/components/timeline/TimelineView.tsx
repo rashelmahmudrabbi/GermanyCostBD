@@ -56,7 +56,7 @@ export function TimelineView() {
   };
 
   return (
-    <Card className="border-border/80 shadow-sm" id="timeline-view">
+    <Card className="scroll-mt-24 border-border/80 shadow-sm" id="timeline-view">
       <CardHeader className="pb-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>

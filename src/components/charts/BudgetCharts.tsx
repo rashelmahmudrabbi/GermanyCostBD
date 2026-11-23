@@ -87,7 +87,7 @@ export function BudgetCharts() {
   };
 
   return (
-    <Card className="border-border/80 shadow-sm">
+    <Card id="budget-charts" className="scroll-mt-24 border-border/80 shadow-xs">
       <CardHeader className="pb-2">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
