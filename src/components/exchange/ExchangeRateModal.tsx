@@ -105,7 +105,7 @@ export function ExchangeRateModal({ open, onOpenChange }: ExchangeRateModalProps
           </div>
 
           {/* Bank Margin Slider */}
-          <div className="space-y-2 p-3 rounded-xl bg-card border border-border/60">
+          <div className="space-y-2 p-3.5 rounded-xl bg-muted/40 dark:bg-muted/20 border border-border/60">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-foreground flex items-center gap-1">
                 <span>{t('bankMargin')}</span>
@@ -132,7 +132,7 @@ export function ExchangeRateModal({ open, onOpenChange }: ExchangeRateModalProps
           </div>
 
           {/* Manual Rate Override */}
-          <div className="p-3 rounded-xl bg-card border border-border/60 space-y-3">
+          <div className="p-3.5 rounded-xl bg-muted/40 dark:bg-muted/20 border border-border/60 space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <Label className="text-xs font-semibold">{t('manualRate')}</Label>
